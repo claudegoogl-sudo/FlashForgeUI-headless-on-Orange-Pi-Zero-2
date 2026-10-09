@@ -359,6 +359,35 @@
         </div>
       </div>
 
+      <!-- Job Library Modal (files stored on the WebUI host) -->
+      <div id="file-library-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lib-title">
+        <div class="modal-content lib-modal">
+          <div class="modal-header">
+            <h2 id="lib-title">Library</h2>
+            <button id="lib-close" class="close-btn" aria-label="Close library">&times;</button>
+          </div>
+          <div class="lib-toolbar">
+            <label class="primary-btn lib-upload-btn">
+              Add files
+              <input type="file" id="lib-upload-input" accept=".gcode,.gx,.3mf" multiple hidden>
+            </label>
+            <button id="lib-printer-files" class="secondary-btn" type="button">Printer files</button>
+            <button id="lib-refresh" class="secondary-btn" type="button">Refresh</button>
+          </div>
+          <div id="lib-progress" class="lib-progress hidden">
+            <div class="lib-progress-track"><div id="lib-progress-bar" class="lib-progress-bar"></div></div>
+            <div id="lib-progress-label" class="lib-progress-label"></div>
+          </div>
+          <div class="modal-body">
+            <div id="lib-list" class="lib-list"></div>
+          </div>
+          <div class="lib-footer">
+            <span id="lib-summary"></span>
+            <span class="lib-hint">Stored on the WebUI host. Print... opens the upload dialog for a stored file; Send to printer only copies it.</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Material Matching Modal -->
       <div id="material-matching-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="material-matching-title">
         <div class="modal-content material-matching">

@@ -20,6 +20,7 @@
 import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
 import { type ParseResult, parseSlicerFile } from '@parallel-7/slicer-meta';
 import express, { type Response, type Router } from 'express';
+import { armUploadedJob, clearTrackedJob, toolIdForFilament } from '../../../services/job-tracking';
 import { toAppError } from '../../../utils/error.utils';
 import {
   createValidationError,
@@ -35,8 +36,12 @@ import type {
   UploadSliceWarning,
 } from '../../types/web-api.types';
 import type { AuthenticatedRequest } from '../auth-middleware';
-import { discardStagedUpload, getStagedUpload, isAllowedJobFileName, stageUpload } from '../upload-staging';
-import { armUploadedJob, clearTrackedJob, toolIdForFilament } from '../../../services/job-tracking';
+import {
+  discardStagedUpload,
+  getStagedUpload,
+  isAllowedJobFileName,
+  stageUpload,
+} from '../upload-staging';
 import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers';
 
 /**
@@ -87,7 +92,11 @@ async function handleStageRequest(
   try {
     const contextResult = resolveContext(req, deps, { requireBackendReady: true });
     if (!contextResult.success) {
-      return sendErrorResponse<JobUploadStageResponse>(res, contextResult.statusCode, contextResult.error);
+      return sendErrorResponse<JobUploadStageResponse>(
+        res,
+        contextResult.statusCode,
+        contextResult.error
+      );
     }
 
     const filenameParam = req.query.filename;
@@ -102,16 +111,27 @@ async function handleStageRequest(
 
     const body = req.body;
     if (!Buffer.isBuffer(body) || body.byteLength === 0) {
-      return sendErrorResponse<JobUploadStageResponse>(res, 400, 'Request body must contain the job file');
+      return sendErrorResponse<JobUploadStageResponse>(
+        res,
+        400,
+        'Request body must contain the job file'
+      );
     }
 
     // Material-station printers (AD5X, Creator 5 / 5 Pro) only accept 3MF files,
     // which carry the per-tool material data the firmware needs for matching.
     // The client blocks this earlier to avoid a pointless transfer; this is the guard.
-    const hasMaterialStation = deps.backendManager.isFeatureAvailable(contextResult.contextId, 'material-station');
+    const hasMaterialStation = deps.backendManager.isFeatureAvailable(
+      contextResult.contextId,
+      'material-station'
+    );
     const is3MF = fileName.toLowerCase().endsWith('.3mf');
     if (hasMaterialStation && !is3MF) {
-      return sendErrorResponse<JobUploadStageResponse>(res, 400, 'This printer only supports 3MF files.');
+      return sendErrorResponse<JobUploadStageResponse>(
+        res,
+        400,
+        'This printer only supports 3MF files.'
+      );
     }
 
     const staged = await stageUpload(fileName, body);
@@ -150,7 +170,11 @@ async function handleStartRequest(
   try {
     const contextResult = resolveContext(req, deps, { requireBackendReady: true });
     if (!contextResult.success) {
-      return sendErrorResponse<JobUploadStartResponse>(res, contextResult.statusCode, contextResult.error);
+      return sendErrorResponse<JobUploadStartResponse>(
+        res,
+        contextResult.statusCode,
+        contextResult.error
+      );
     }
 
     const validation = JobUploadStartRequestSchema.safeParse(req.body);
@@ -174,12 +198,19 @@ async function handleStartRequest(
       return sendErrorResponse<JobUploadStartResponse>(res, 400, mappingError);
     }
 
-    const hasMaterialStation = deps.backendManager.isFeatureAvailable(contextResult.contextId, 'material-station');
+    const hasMaterialStation = deps.backendManager.isFeatureAvailable(
+      contextResult.contextId,
+      'material-station'
+    );
     const is3MF = staged.fileName.toLowerCase().endsWith('.3mf');
 
     try {
       if (hasMaterialStation && !is3MF) {
-        return sendErrorResponse<JobUploadStartResponse>(res, 400, 'This printer only supports 3MF files.');
+        return sendErrorResponse<JobUploadStartResponse>(
+          res,
+          400,
+          'This printer only supports 3MF files.'
+        );
       }
 
       const result = hasMaterialStation
@@ -246,7 +277,9 @@ async function handleStartRequest(
 }
 
 /** Reject mappings that reuse a tool or a slot, matching the /jobs/start guard. */
-function findDuplicateMappingError(mappings: readonly { toolId: number; slotId: number }[]): string | null {
+function findDuplicateMappingError(
+  mappings: readonly { toolId: number; slotId: number }[]
+): string | null {
   const toolIds = new Set<number>();
   const slotIds = new Set<number>();
 
@@ -270,7 +303,7 @@ function findDuplicateMappingError(mappings: readonly { toolId: number; slotId: 
  * Every fallback chain below is copied from the desktop job uploader's
  * `populateMetadata`, so both surfaces show the same value for the same file.
  */
-function normalizeMetadata(parsed: ParseResult): UploadJobMetadata {
+export function normalizeMetadata(parsed: ParseResult): UploadJobMetadata {
   const file = parsed.file ?? null;
   const threeMf = parsed.threeMf ?? null;
   const slicer = parsed.slicer ?? null;

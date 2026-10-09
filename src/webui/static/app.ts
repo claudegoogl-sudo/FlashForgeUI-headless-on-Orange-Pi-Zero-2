@@ -32,6 +32,7 @@ import {
   loadAuthStatus,
   setupAuthEventHandlers,
 } from './features/authentication.js';
+import { refreshCalibrationButton, setupCalibration } from './features/calibration.js';
 import { initializeCamera } from './features/camera.js';
 import {
   applyUrlPrinterSelection,
@@ -40,6 +41,9 @@ import {
   initializeContextSwitching,
   setupContextEventHandlers,
 } from './features/context-switching.js';
+import { setupFileLibraryHandlers } from './features/file-library.js';
+import { refreshFileManagerButton, setupFileManager } from './features/file-manager.js';
+import { refreshIfsStationCard, setupIfsStationCard } from './features/ifs-station.js';
 import {
   loadPrinterFeatures,
   sendPrinterCommand,
@@ -47,6 +51,7 @@ import {
   startPrintJob,
   updateFeatureVisibility,
 } from './features/job-control.js';
+import { setupJobUpload } from './features/job-upload.js';
 import {
   applyDefaultTheme,
   applySettings,
@@ -62,14 +67,10 @@ import {
   confirmMaterialMatching,
   setupMaterialMatchingHandlers,
 } from './features/material-matching.js';
-import { refreshCalibrationButton, setupCalibration } from './features/calibration.js';
-import { refreshFileManagerButton, setupFileManager } from './features/file-manager.js';
-import { refreshIfsStationCard, setupIfsStationCard } from './features/ifs-station.js';
-import { setupJobUpload } from './features/job-upload.js';
-import { refreshRebootButton, setupReboot } from './features/reboot.js';
-import { refreshSSHSettings, setupSSHSettings } from './features/ssh.js';
 import { initializeDiscovery } from './features/printer-discovery.js';
+import { refreshRebootButton, setupReboot } from './features/reboot.js';
 import { loadSpoolmanConfig, setupSpoolmanHandlers } from './features/spoolman.js';
+import { refreshSSHSettings, setupSSHSettings } from './features/ssh.js';
 import { $, hideElement, showElement } from './shared/dom.js';
 import { initializeLucideIcons } from './shared/icons.js';
 import { type DialogHandlers, setupDialogEventHandlers } from './ui/dialogs.js';
@@ -97,7 +98,14 @@ export interface AuthStatusResponse {
 }
 
 export interface WebSocketMessage {
-  type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG' | 'SPOOLMAN_UPDATE' | 'REBOOT_STATUS';
+  type:
+    | 'AUTH_SUCCESS'
+    | 'STATUS_UPDATE'
+    | 'ERROR'
+    | 'COMMAND_RESULT'
+    | 'PONG'
+    | 'SPOOLMAN_UPDATE'
+    | 'REBOOT_STATUS';
   timestamp: string;
   status?: PrinterStatus;
   error?: string;
@@ -511,9 +519,7 @@ async function initialize(): Promise<void> {
     onMaterialMatchingConfirm: () => confirmMaterialMatching(),
     onTemperatureSubmit: (target, temperature) => {
       const endpoint =
-        target.kind === 'tool'
-          ? `temperature/tool/${target.index}`
-          : `temperature/${target.kind}`;
+        target.kind === 'tool' ? `temperature/tool/${target.index}` : `temperature/${target.kind}`;
       return sendPrinterCommand(endpoint, { temperature });
     },
   };
@@ -521,6 +527,7 @@ async function initialize(): Promise<void> {
   setupJobControlEventHandlers();
   setupMaterialMatchingHandlers();
   setupJobUpload();
+  setupFileLibraryHandlers();
   setupSpoolmanHandlers();
   setupIfsStationCard();
   setupFileManager();

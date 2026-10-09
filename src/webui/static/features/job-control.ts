@@ -9,17 +9,18 @@
 
 import type {
   MaterialMapping,
-  SpoolAssignment,
   PendingJobStart,
   PrinterCommandResponse,
   PrinterFeaturesResponse,
   PrintJobStartResponse,
+  SpoolAssignment,
 } from '../app.js';
 import { getCurrentSettings, state } from '../core/AppState.js';
 import { apiRequest, sendCommand } from '../core/Transport.js';
 import { $, hideElement, showToast } from '../shared/dom.js';
 import { isAD5XJobFile, isMultiColorJobFile } from '../shared/formatting.js';
 import { loadFileList, showTemperatureDialog, type TemperatureTarget } from '../ui/dialogs.js';
+import { openFileLibrary } from './file-library.js';
 import { openJobUploadModal } from './job-upload.js';
 import { applySettings, refreshSettingsUI } from './layout-theme.js';
 import { openMaterialMatchingModal } from './material-matching.js';
@@ -291,6 +292,9 @@ export function setupJobControlEventHandlers(): void {
           break;
         case 'btn-upload-job':
           openJobUploadModal();
+          break;
+        case 'btn-file-library':
+          await openFileLibrary();
           break;
         case 'btn-refresh':
           sendCommand({ command: 'REQUEST_STATUS' });

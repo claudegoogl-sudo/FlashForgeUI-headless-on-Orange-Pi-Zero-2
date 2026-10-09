@@ -139,6 +139,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
           </div>
           <div class="btn-row">
             <button id="btn-upload-job" class="control-btn">Upload Job</button>
+            <button id="btn-file-library" class="control-btn">Library</button>
           </div>
         </div>
       </div>
@@ -390,17 +391,19 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
 };
 
 const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
+  // Two 6-column halves that tile without holes for the Creator 5 panel set
+  // (multi-tool temperature + material station) and for single-nozzle printers.
   camera: { x: 0, y: 0, w: 6, h: 6 },
-  controls: { x: 6, y: 0, w: 6, h: 4 },
-  'model-preview': { x: 6, y: 4, w: 6, h: 2 },
+  controls: { x: 6, y: 0, w: 6, h: 6 },
   'printer-state': { x: 0, y: 6, w: 3, h: 2 },
   'temp-control': { x: 3, y: 6, w: 3, h: 2 },
-  'creator5-temperature': { x: 3, y: 6, w: 3, h: 4 },
+  'creator5-temperature': { x: 3, y: 6, w: 3, h: 5 },
+  'ifs-station': { x: 0, y: 8, w: 3, h: 3 },
   'job-progress': { x: 6, y: 6, w: 6, h: 2 },
-  'filtration-tvoc': { x: 0, y: 8, w: 3, h: 2 },
-  'spoolman-tracker': { x: 3, y: 8, w: 3, h: 2 },
-  'job-details': { x: 6, y: 8, w: 6, h: 3 },
-  'ifs-station': { x: 0, y: 11, w: 4, h: 3 },
+  'job-details': { x: 6, y: 8, w: 3, h: 3 },
+  'model-preview': { x: 9, y: 8, w: 3, h: 3 },
+  'filtration-tvoc': { x: 0, y: 11, w: 3, h: 2 },
+  'spoolman-tracker': { x: 3, y: 11, w: 3, h: 2 },
 };
 
 const COMPONENT_IDS = Object.keys(COMPONENT_DEFINITIONS);

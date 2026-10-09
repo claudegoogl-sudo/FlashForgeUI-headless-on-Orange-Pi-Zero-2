@@ -20,7 +20,9 @@
  * and AD5XBackend, reducing code duplication while maintaining model-specific feature differentiation.
  */
 
+import * as nodePath from 'node:path';
 import { FiveMClient, FlashForgeClient, type Product } from '@ghosttypes/ff-api';
+import { createFileUsageStore, FilamentUsageTracker } from '../services/FilamentUsageTracker';
 import type {
   BackendInitOptions,
   BasicJobInfo,
@@ -32,6 +34,7 @@ import type {
   PrinterFeatureSet,
   StatusResult,
 } from '../types/printer-backend';
+import { getDataPath } from '../utils/setup';
 import { BasePrinterBackend } from './BasePrinterBackend';
 
 /**
@@ -45,6 +48,18 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
   protected legacyClient!: FlashForgeClient;
   protected productInfo: Product | null = null;
   private lastFallbackCameraProbeAt = 0;
+
+  /** Fallback usage tracking for firmware that reports no job filament estimates (Creator 5) */
+  private filamentUsageTracker: FilamentUsageTracker | null = null;
+
+  private getFilamentUsageTracker(): FilamentUsageTracker {
+    if (!this.filamentUsageTracker) {
+      const serial = (this.fiveMClient.serialNumber || 'printer').replace(/[^A-Za-z0-9_-]/g, '_');
+      const file = nodePath.join(getDataPath(), `filament-usage-${serial}.json`);
+      this.filamentUsageTracker = new FilamentUsageTracker(createFileUsageStore(file));
+    }
+    return this.filamentUsageTracker;
+  }
 
   /**
    * Cache for last known filament usage data while printing
@@ -332,9 +347,33 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
       const elapsedTimeSeconds = machineInfo?.PrintDuration || 0;
       const remainingTimeSeconds = estimatedTimeSeconds;
 
-      const estimatedRightLen = machineInfo?.EstLength || 0;
-      const estimatedRightWeight = machineInfo?.EstWeight || 0;
+      let estimatedRightLen = machineInfo?.EstLength || 0;
+      let estimatedRightWeight = machineInfo?.EstWeight || 0;
       const currentJob = machineInfo?.PrintFileName;
+
+      // Firmware without job filament estimates (Creator 5 1.9.x reports 0 for all of
+      // them): measure the job from the lifetime filament counter instead.
+      if (
+        (status === 'printing' || status === 'paused') &&
+        currentJob &&
+        estimatedRightLen === 0 &&
+        estimatedRightWeight === 0
+      ) {
+        const stationInfo = machineInfo?.MatlStationInfo;
+        const activeSlot = stationInfo?.slotInfos?.find(
+          (slot) => slot.slotId === stationInfo.currentSlot
+        );
+        const usage = this.getFilamentUsageTracker().update({
+          job: currentJob,
+          printDurationSeconds: machineInfo?.PrintDuration || 0,
+          cumulativeFilamentMetres: machineInfo?.CumulativeFilament || 0,
+          materialName: activeSlot?.materialName,
+        });
+        if (usage) {
+          estimatedRightLen = usage.lengthMetres;
+          estimatedRightWeight = usage.weightGrams;
+        }
+      }
 
       // Cache filament usage while actively printing
       if (

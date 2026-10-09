@@ -17,7 +17,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
@@ -102,6 +102,44 @@ async function cleanOrphansOnce(): Promise<void> {
   } catch {
     // Directory may not exist yet; nothing to clean.
   }
+}
+
+/**
+ * Stage a file that already exists on the host (e.g. from the job library) by
+ * copying it into scratch storage. Unlike {@link stageUpload} the bytes never
+ * pass through memory, so large files are safe on small boards.
+ */
+export async function stageExistingFile(
+  fileName: string,
+  sourcePath: string
+): Promise<StagedUpload> {
+  if (!isAllowedJobFileName(fileName)) {
+    throw new Error('Unsupported job file name');
+  }
+
+  await mkdir(STAGE_DIR, { recursive: true });
+  await cleanOrphansOnce();
+
+  if (staged.size >= MAX_STAGED_FILES) {
+    const oldest = Array.from(staged.values()).sort((a, b) => a.createdAt - b.createdAt)[0];
+    if (oldest) {
+      await discardStagedUpload(oldest.id);
+    }
+  }
+
+  const id = randomUUID();
+  const directory = join(STAGE_DIR, id);
+  await mkdir(directory, { recursive: true });
+
+  const filePath = join(directory, fileName);
+  await copyFile(sourcePath, filePath);
+  const { size } = await stat(filePath);
+
+  const entry: StagedUpload = { id, filePath, fileName, size, createdAt: Date.now() };
+  staged.set(id, entry);
+  ensureSweepTimer();
+
+  return entry;
 }
 
 /**

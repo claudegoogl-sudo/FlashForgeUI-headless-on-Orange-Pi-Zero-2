@@ -57,10 +57,12 @@ const MATERIAL_STATION_PROGRESS_STEPS: readonly UploadProgressStep[] = [
 const MATERIAL_STATION_STEP_DELAY_MS = 300;
 
 /** Progress steps emitted by the desktop `uploader:upload-job` handler. */
-const STANDARD_PROGRESS_STEPS: readonly UploadProgressStep[] = [10, 30, 50, 70, 90].map((percentage) => ({
-  percentage,
-  status: 'Uploading file...',
-}));
+const STANDARD_PROGRESS_STEPS: readonly UploadProgressStep[] = [10, 30, 50, 70, 90].map(
+  (percentage) => ({
+    percentage,
+    status: 'Uploading file...',
+  })
+);
 const STANDARD_STEP_DELAY_MS = 200;
 
 /** Delay before the dialog closes itself after a successful upload. */
@@ -223,6 +225,17 @@ async function handleFileSelected(file: File | null): Promise<void> {
 
   showLoading(false);
 
+  await applyStagedResult(staged, file.name);
+}
+
+/**
+ * Show a staged file in the dialog: metadata, then material matching when required.
+ * Shared by the browser upload path and by files staged from the host-side job library.
+ */
+async function applyStagedResult(
+  staged: JobUploadStageResponse,
+  fallbackName: string
+): Promise<void> {
   if (!staged.success || !staged.uploadId || !staged.metadata) {
     const message = staged.error || 'Unknown error';
     setFilePathDisplay(`Error parsing file: ${message}`, '');
@@ -233,7 +246,7 @@ async function handleFileSelected(file: File | null): Promise<void> {
   }
 
   stagedUploadId = staged.uploadId;
-  stagedFileName = staged.fileName ?? file.name;
+  stagedFileName = staged.fileName ?? fallbackName;
 
   populateMetadata(staged.metadata);
 
@@ -258,6 +271,26 @@ async function handleFileSelected(file: File | null): Promise<void> {
   savedSpoolAssignments = confirmed?.spoolAssignments ?? [];
   renderMappingSummary();
   setOkButtonState(Boolean(confirmed));
+}
+
+/**
+ * Open the upload dialog for a file the server has already staged (job library).
+ * The dialog then behaves exactly as after a browser upload.
+ */
+export async function openJobUploadWithStaged(
+  staged: JobUploadStageResponse,
+  displayName: string
+): Promise<void> {
+  openJobUploadModal();
+  savedMaterialMappings = null;
+  savedSpoolAssignments = [];
+  renderMappingSummary();
+  await discardStagedFile();
+  setFilePathDisplay(displayName, displayName);
+  resetMetadata();
+  setOkButtonState(false);
+  showLoading(false);
+  await applyStagedResult(staged, displayName);
 }
 
 /**
@@ -301,7 +334,9 @@ function stageFile(file: File): Promise<JobUploadStageResponse> {
       }
     });
 
-    request.addEventListener('error', () => reject(new Error('Network error while uploading the file')));
+    request.addEventListener('error', () =>
+      reject(new Error('Network error while uploading the file'))
+    );
     request.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
     request.send(file);
@@ -405,10 +440,15 @@ async function handleUpload(): Promise<void> {
   uploadInFlight = true;
   setOkButtonState(false);
 
-  const steps = useMaterialStationUpload ? MATERIAL_STATION_PROGRESS_STEPS : STANDARD_PROGRESS_STEPS;
+  const steps = useMaterialStationUpload
+    ? MATERIAL_STATION_PROGRESS_STEPS
+    : STANDARD_PROGRESS_STEPS;
   const delay = useMaterialStationUpload ? MATERIAL_STATION_STEP_DELAY_MS : STANDARD_STEP_DELAY_MS;
 
-  updateUploadProgress(0, useMaterialStationUpload ? 'Preparing AD5X upload...' : 'Preparing upload...');
+  updateUploadProgress(
+    0,
+    useMaterialStationUpload ? 'Preparing AD5X upload...' : 'Preparing upload...'
+  );
   const stopSimulation = simulateProgress(steps, delay);
 
   let result: JobUploadStartResponse;
@@ -542,10 +582,22 @@ function populateMetadata(metadata: UploadJobMetadata): void {
     'job-upload-meta-first-layer-time',
     metadata.firstLayerTime !== null ? formatDuration(metadata.firstLayerTime) : '-'
   );
-  setMetaText('job-upload-meta-layer-height', metadata.layerHeight !== null ? `${metadata.layerHeight} mm` : '-');
-  setMetaText('job-upload-meta-infill', metadata.infillDensity !== null ? `${metadata.infillDensity}%` : '-');
-  setMetaText('job-upload-meta-layers', metadata.layerCount !== null ? metadata.layerCount.toString() : '-');
-  setMetaText('job-upload-meta-support', metadata.supportUsed === null ? '-' : metadata.supportUsed ? 'Yes' : 'No');
+  setMetaText(
+    'job-upload-meta-layer-height',
+    metadata.layerHeight !== null ? `${metadata.layerHeight} mm` : '-'
+  );
+  setMetaText(
+    'job-upload-meta-infill',
+    metadata.infillDensity !== null ? `${metadata.infillDensity}%` : '-'
+  );
+  setMetaText(
+    'job-upload-meta-layers',
+    metadata.layerCount !== null ? metadata.layerCount.toString() : '-'
+  );
+  setMetaText(
+    'job-upload-meta-support',
+    metadata.supportUsed === null ? '-' : metadata.supportUsed ? 'Yes' : 'No'
+  );
 
   renderWarnings(metadata.warnings);
   renderThumbnail(metadata.thumbnail);
@@ -572,7 +624,8 @@ function renderWarnings(warnings: readonly UploadSliceWarning[]): void {
     item.className = 'job-upload-warning-item';
 
     const icon = document.createElement('span');
-    const levelClass = warning.level >= 2 ? 'level-error' : warning.level >= 1 ? 'level-warning' : 'level-info';
+    const levelClass =
+      warning.level >= 2 ? 'level-error' : warning.level >= 1 ? 'level-warning' : 'level-info';
     icon.className = `job-upload-warning-icon ${levelClass}`;
     icon.textContent = warning.level >= 2 ? '⚠' : 'ℹ';
 
@@ -693,7 +746,9 @@ function renderMappingSummary(): void {
     chip.appendChild(createMappingText('job-upload-mapping-arrow', '→'));
     chip.appendChild(createMappingSwatch(mapping.slotMaterialColor));
     chip.appendChild(createMappingText('job-upload-mapping-label', `Slot ${mapping.slotId}`));
-    chip.appendChild(createMappingText('job-upload-mapping-material', mapping.materialName || 'Unknown'));
+    chip.appendChild(
+      createMappingText('job-upload-mapping-material', mapping.materialName || 'Unknown')
+    );
 
     const spoolChoice = savedSpoolAssignments.find((entry) => entry.toolId === mapping.toolId);
     if (spoolChoice) {
