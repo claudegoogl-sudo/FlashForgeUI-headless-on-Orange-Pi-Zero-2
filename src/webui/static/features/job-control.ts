@@ -137,6 +137,23 @@ export async function startPrintJob(): Promise<void> {
     return;
   }
 
+  // Creator 5 series: the printer lists only file names, so there is no tool data to
+  // match against. A file already on the printer can still be started; without a
+  // mapping each tool prints from the slot with the same number (as sliced).
+  if (startNow && Boolean(state.printerFeatures?.hasMultiTool)) {
+    const proceed = window.confirm(
+      `Start ${state.selectedFile} as sliced?
+
+` +
+        'The printer does not report which tools this file uses, so materials cannot be matched here. ' +
+        'Tool 1 prints from slot 1, tool 2 from slot 2, and so on. ' +
+        'To choose slots, start the file with Upload Job or Library > Print... instead.'
+    );
+    if (!proceed) {
+      return;
+    }
+  }
+
   const success = await sendJobStartRequest({
     filename: state.selectedFile,
     leveling: autoLevel,

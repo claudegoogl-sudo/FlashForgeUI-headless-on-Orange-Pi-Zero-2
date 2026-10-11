@@ -438,7 +438,10 @@ function renderStationTracking(station: SpoolmanStationTracking): void {
       for (const tool of job.tools) {
         const estimate = tool.usedG !== null ? ` · ${tool.usedG.toFixed(1)} g` : '';
         jobView.appendChild(
-          createStatRow(`Tool ${tool.toolId + 1} (slot ${tool.slotId}):`, `Spool #${tool.spoolId}${estimate}`)
+          createStatRow(
+            `Tool ${tool.toolId + 1} (slot ${tool.slotId}):`,
+            `Spool #${tool.spoolId}${estimate}`
+          )
         );
       }
     }
@@ -474,10 +477,7 @@ function describeDeduction(deduction: DeductionSummary | null): string {
   const approximate = deduction.approximate ? ' (approximate)' : '';
   const charged = deduction.tools
     .filter((tool) => tool.status === 'deducted' && tool.amount !== null)
-    .map(
-      (tool) =>
-        `#${tool.spoolId} ${tool.amount}${tool.mode === 'weight' ? ' g' : ' mm'}`
-    )
+    .map((tool) => `#${tool.spoolId} ${tool.amount}${tool.mode === 'weight' ? ' g' : ' mm'}`)
     .join(', ');
   return (
     `${deduction.fileName} ${ending[deduction.terminal]} at ${Math.round(deduction.progress)}%${approximate}: ` +
@@ -518,19 +518,19 @@ function updateButtonStates(printerState: string): void {
   const localBtn = $('btn-start-local') as HTMLButtonElement | null;
   const homeAxesBtn = $('btn-home-axes') as HTMLButtonElement | null;
 
-  // Creator 5 series firmware neither sends nor accepts material mappings
-  // over the local API, so starting a previously-uploaded local/recent job
-  // dead-ends. Disable the resident-file entry points on those printers; a
-  // fresh 3mf upload + start still works and is left untouched.
+  // Creator 5 series: the printer lists only file names (no tool data), so a file
+  // already on the printer cannot go through material matching. It can still be
+  // started as sliced (tool N prints from slot N); job-control confirms that first.
   const isCreator5Series = Boolean(state.printerFeatures?.hasMultiTool);
-  const LOCAL_JOB_UNAVAILABLE_MSG = 'Local job management is not available on this printer.';
+  const RESIDENT_JOB_HINT =
+    'Starts as sliced: tool N prints from slot N. Use Upload Job or Library to match materials.';
   if (recentBtn) {
-    recentBtn.disabled = !isReadyForNewJob || isCreator5Series;
-    recentBtn.title = isCreator5Series ? LOCAL_JOB_UNAVAILABLE_MSG : '';
+    recentBtn.disabled = !isReadyForNewJob;
+    recentBtn.title = isCreator5Series ? RESIDENT_JOB_HINT : '';
   }
   if (localBtn) {
-    localBtn.disabled = !isReadyForNewJob || isCreator5Series;
-    localBtn.title = isCreator5Series ? LOCAL_JOB_UNAVAILABLE_MSG : '';
+    localBtn.disabled = !isReadyForNewJob;
+    localBtn.title = isCreator5Series ? RESIDENT_JOB_HINT : '';
   }
   // Uploading a fresh file works on every model, Creator 5 series included -
   // the 3mf is parsed here, so material mappings are available on upload even

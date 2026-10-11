@@ -85,14 +85,8 @@ export async function loadFileList(source: 'recent' | 'local'): Promise<void> {
     return;
   }
 
-  // Defensive: Creator 5 series exposes no resident-file material mappings over
-  // the local API, so local/recent jobs can't be started. The entry buttons are
-  // also disabled for these printers (see updateButtonStates in panels.ts); this
-  // guard keeps any other caller from dead-ending too.
-  if (state.printerFeatures?.hasMultiTool) {
-    showToast('Local job management is not available on this printer.', 'error');
-    return;
-  }
+  // Creator 5 series: resident files carry no tool data, so they cannot be matched
+  // to slots here, but they can be started as sliced (startPrintJob confirms first).
 
   // The stored-file tracking indicator needs the Spoolman slot assignments;
   // fetch them lazily if the Spoolman panel has never loaded the config.
