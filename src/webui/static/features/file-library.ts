@@ -13,6 +13,7 @@ import { state } from '../core/AppState.js';
 import { apiRequest, apiRequestWithMetadata, buildAuthHeaders } from '../core/Transport.js';
 import { $, hideElement, showElement, showToast } from '../shared/dom.js';
 import { loadFileList } from '../ui/dialogs.js';
+import { previewGcodeFile } from './gcode-viewer.js';
 import { openJobUploadWithStaged } from './job-upload.js';
 
 interface LibraryFile {
@@ -163,6 +164,7 @@ function renderLibrary(list: HTMLElement, files: LibraryFile[]): void {
     actions.className = 'lib-actions';
     actions.appendChild(makeButton('Print...', 'print', file.name, 'lib-primary'));
     actions.appendChild(makeButton('Send to printer', 'send', file.name));
+    actions.appendChild(makeButton('View', 'view', file.name));
     actions.appendChild(makeButton('Download', 'download', file.name));
     actions.appendChild(makeButton('Rename', 'rename', file.name));
     actions.appendChild(makeButton('Delete', 'delete', file.name, 'lib-danger'));
@@ -475,6 +477,13 @@ export function setupFileLibraryHandlers(): void {
     switch (button.dataset.action) {
       case 'print':
         void printFromLibrary(name, button);
+        break;
+      case 'view':
+        if (previewGcodeFile(name)) {
+          closeFileLibrary();
+        } else {
+          showToast('Enable the G-code View panel in the settings to preview files', 'error');
+        }
         break;
       case 'send':
         void sendToPrinter(name, button);

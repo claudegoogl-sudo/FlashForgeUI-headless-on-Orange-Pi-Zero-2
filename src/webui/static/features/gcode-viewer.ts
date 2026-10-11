@@ -74,6 +74,10 @@ let live = true;
 let scrubLayer = 1;
 /** Fit the view to the model (prime tower may be off-canvas) or to everything. */
 let fitModel = true;
+/** File shown as a preview (browse only) instead of the running job; null = follow the job. */
+let previewName: string | null = null;
+/** Most recent status received while a preview was open, replayed when it closes. */
+let heldStatus: PrinterStatus | null = null;
 
 let sampleOffset = 0;
 let sampleTime = 0;
@@ -197,6 +201,10 @@ function requestLayer(layerNumber: number): void {
 }
 
 function handleStatus(status: PrinterStatus): void {
+  if (previewName !== null) {
+    heldStatus = status; // keep showing the preview; catch up when it closes
+    return;
+  }
   const name = status.jobName || null;
   const printerState = (status.printerState || '').toLowerCase();
   printing = Boolean(name) && ACTIVE_STATES.has(printerState);
@@ -324,7 +332,12 @@ function draw(): void {
     if (Number(slider.max) !== meta.layers.length) slider.max = String(meta.layers.length);
     if (live && Number(slider.value) !== layerNumber) slider.value = String(layerNumber);
   }
-  $('gcode-view-live')?.classList.toggle('active', live);
+  const liveButton = $('gcode-view-live');
+  if (liveButton) {
+    liveButton.classList.toggle('active', live && previewName === null);
+    liveButton.textContent = previewName !== null ? 'Close preview' : 'Live';
+    liveButton.title = previewName !== null ? 'Return to the running print' : 'Follow the print';
+  }
 
   requestLayer(layerNumber);
   requestLayer(layerNumber - 1);
@@ -428,12 +441,13 @@ function updateInfo(
   }
   const layer = meta.layers[layerNumber - 1];
   const parts = [`Layer ${layerNumber} / ${meta.layers.length}`, `Z ${layer.z.toFixed(2)} mm`];
+  if (previewName !== null) parts.unshift(`Preview: ${previewName}`);
   if (live) {
     if (activeTool !== null) parts.push(`T${activeTool + 1}`);
     if (onTower) parts.push('at the prime tower');
     parts.push(`${((offset / meta.size) * 100).toFixed(1)} % of file`);
   } else {
-    parts.push('browsing');
+    if (previewName === null) parts.push('browsing');
   }
   info.textContent = parts.join(' · ');
 }
@@ -452,6 +466,41 @@ function renderLegend(): void {
     item.appendChild(document.createTextNode(`T${tool + 1}`));
     legend.appendChild(item);
   }
+}
+
+/**
+ * Show a file from the job library in the panel for browsing, independent of what
+ * is printing. Returns false when the panel is not on the page (hidden in settings).
+ */
+export function previewGcodeFile(name: string): boolean {
+  const panel = $('gcode-view-panel');
+  if (!panel || !$('gcode-view-canvas')) {
+    return false;
+  }
+  previewName = name;
+  resetJob(name);
+  live = false;
+  scrubLayer = 1;
+  printing = false;
+  const slider = $('gcode-view-slider') as HTMLInputElement | null;
+  if (slider) slider.value = '1';
+  void loadMeta(name);
+  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  lastDraw = 0;
+  scheduleFrame();
+  return true;
+}
+
+function closePreview(): void {
+  previewName = null;
+  resetJob(null);
+  const status = heldStatus ?? state.printerStatus;
+  heldStatus = null;
+  if (status) {
+    handleStatus(status);
+  }
+  lastDraw = 0;
+  scheduleFrame();
 }
 
 export function setupGcodeViewer(): void {
@@ -478,6 +527,10 @@ export function setupGcodeViewer(): void {
     }
     const target = element?.closest('#gcode-view-live');
     if (!target) return;
+    if (previewName !== null) {
+      closePreview();
+      return;
+    }
     live = true;
     lastDraw = 0;
     renderLegend();
