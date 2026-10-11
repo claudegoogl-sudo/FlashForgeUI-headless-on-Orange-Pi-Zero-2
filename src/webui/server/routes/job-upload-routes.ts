@@ -21,6 +21,7 @@ import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
 import { type ParseResult, parseSlicerFile } from '@parallel-7/slicer-meta';
 import express, { type Response, type Router } from 'express';
 import { armUploadedJob, clearTrackedJob, toolIdForFilament } from '../../../services/job-tracking';
+import { getGcodeViewService } from '../../../services/GcodeViewService';
 import { toAppError } from '../../../utils/error.utils';
 import {
   createValidationError,
@@ -228,6 +229,12 @@ async function handleStartRequest(
             leveling: autoLevel,
             startNow,
           });
+
+      // Keep a copy for the live G-code viewer (the staged file is discarded and the
+      // printer cannot hand the file back). Best effort; never fails the upload.
+      if (result.success) {
+        await getGcodeViewService().rememberJobFile(result.fileName || staged.fileName, staged.filePath);
+      }
 
       // Spoolman per-job tracking: a job the app starts replaces any earlier
       // tracked job, and is tracked itself when the user chose spools for it.

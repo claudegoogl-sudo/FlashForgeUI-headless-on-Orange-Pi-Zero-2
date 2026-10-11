@@ -82,6 +82,13 @@ const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
     minSize: { w: 2, h: 2 },
     defaultPosition: { x: 6, y: 8 },
   },
+  'gcode-viewer': {
+    id: 'gcode-viewer',
+    displayName: 'G-code View',
+    defaultSize: { w: 12, h: 6 },
+    minSize: { w: 3, h: 3 },
+    defaultPosition: { x: 0, y: 11 },
+  },
   'spoolman-tracker': {
     id: 'spoolman-tracker',
     displayName: 'Spoolman Tracker',
@@ -302,6 +309,27 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
       </div>
     `,
   },
+  'gcode-viewer': {
+    id: 'gcode-viewer',
+    html: `
+      <div class="panel" id="gcode-view-panel">
+        <div class="panel-header">G-code View</div>
+        <div class="panel-content gcode-view-content">
+          <div class="gcode-view-stage">
+            <canvas id="gcode-view-canvas"></canvas>
+            <div id="gcode-view-message" class="gcode-view-message">No active print.</div>
+          </div>
+          <div id="gcode-view-controls" class="gcode-view-controls hidden">
+            <button id="gcode-view-live" class="gcode-view-live active" type="button" title="Follow the print">Live</button>
+            <input id="gcode-view-slider" class="gcode-view-slider" type="range" min="1" max="1" value="1" aria-label="Layer">
+            <button id="gcode-view-fit" class="gcode-view-live hidden" type="button" title="Switch between fitting the model and everything including the prime tower">Fit: model</button>
+            <span id="gcode-view-legend" class="gcode-view-legend"></span>
+          </div>
+          <div id="gcode-view-info" class="gcode-view-info"></div>
+        </div>
+      </div>
+    `,
+  },
   'spoolman-tracker': {
     id: 'spoolman-tracker',
     html: `
@@ -402,8 +430,9 @@ const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
   'job-progress': { x: 6, y: 6, w: 6, h: 2 },
   'job-details': { x: 6, y: 8, w: 3, h: 3 },
   'model-preview': { x: 9, y: 8, w: 3, h: 3 },
-  'filtration-tvoc': { x: 0, y: 11, w: 3, h: 2 },
-  'spoolman-tracker': { x: 3, y: 11, w: 3, h: 2 },
+  'gcode-viewer': { x: 0, y: 11, w: 12, h: 6 },
+  'filtration-tvoc': { x: 0, y: 17, w: 3, h: 2 },
+  'spoolman-tracker': { x: 3, y: 17, w: 3, h: 2 },
 };
 
 const COMPONENT_IDS = Object.keys(COMPONENT_DEFINITIONS);

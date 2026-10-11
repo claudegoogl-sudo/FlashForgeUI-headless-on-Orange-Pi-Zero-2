@@ -10,6 +10,7 @@ export class WebUIMobileLayoutManager {
   private readonly componentOrder = [
     'camera',
     'job-progress',
+    'gcode-viewer',
     'controls',
     'printer-state',
     'temp-control',

@@ -20,6 +20,7 @@ import { registerContextRoutes } from './routes/context-routes';
 import { registerDiscoveryRoutes } from './routes/discovery-routes';
 import { registerFileLibraryRoutes } from './routes/file-library-routes';
 import { registerFileManagerRoutes } from './routes/file-manager-routes';
+import { registerGcodeViewRoutes } from './routes/gcode-view-routes';
 import { registerFiltrationRoutes } from './routes/filtration-routes';
 import { registerJobRoutes } from './routes/job-routes';
 import { registerJobUploadRoutes } from './routes/job-upload-routes';
@@ -73,6 +74,7 @@ export function createAPIRoutes(deps: RouteDependencies = buildRouteDependencies
   registerJobRoutes(router, deps);
   registerJobUploadRoutes(router, deps);
   registerFileLibraryRoutes(router, deps);
+  registerGcodeViewRoutes(router);
   registerCameraRoutes(router, deps);
   registerContextRoutes(router, deps);
   registerThemeRoutes(router, deps);

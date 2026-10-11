@@ -42,6 +42,7 @@ import {
   setupContextEventHandlers,
 } from './features/context-switching.js';
 import { setupFileLibraryHandlers } from './features/file-library.js';
+import { setupGcodeViewer } from './features/gcode-viewer.js';
 import { refreshFileManagerButton, setupFileManager } from './features/file-manager.js';
 import { refreshIfsStationCard, setupIfsStationCard } from './features/ifs-station.js';
 import {
@@ -528,6 +529,7 @@ async function initialize(): Promise<void> {
   setupMaterialMatchingHandlers();
   setupJobUpload();
   setupFileLibraryHandlers();
+  setupGcodeViewer();
   setupSpoolmanHandlers();
   setupIfsStationCard();
   setupFileManager();
