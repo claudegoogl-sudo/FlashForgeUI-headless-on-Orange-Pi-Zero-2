@@ -43,6 +43,7 @@ import {
 } from './features/context-switching.js';
 import { setupFileLibraryHandlers } from './features/file-library.js';
 import { setupGcodeViewer } from './features/gcode-viewer.js';
+import { setupPrintSpeed } from './features/print-speed.js';
 import { refreshFileManagerButton, setupFileManager } from './features/file-manager.js';
 import { refreshIfsStationCard, setupIfsStationCard } from './features/ifs-station.js';
 import {
@@ -164,6 +165,7 @@ export interface PrinterStatus {
   filtrationMode?: 'external' | 'internal' | 'none';
   estimatedWeight?: number;
   estimatedLength?: number;
+  printSpeed?: number; // Print speed override in percent (100 = as sliced)
   thumbnailData?: string | null; // Base64 encoded thumbnail
   cumulativeFilament?: number; // Total lifetime filament usage in meters
   cumulativePrintTime?: number; // Total lifetime print time in minutes
@@ -530,6 +532,7 @@ async function initialize(): Promise<void> {
   setupJobUpload();
   setupFileLibraryHandlers();
   setupGcodeViewer();
+  setupPrintSpeed();
   setupSpoolmanHandlers();
   setupIfsStationCard();
   setupFileManager();

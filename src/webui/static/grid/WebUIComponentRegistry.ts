@@ -275,6 +275,12 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
             <span id="progress-percentage">0%</span>
           </div>
           <progress id="progress-bar" value="0" max="100"></progress>
+          <div class="speed-row hidden" id="speed-row">
+            <span>Speed:</span>
+            <input id="speed-slider" class="speed-slider" type="range" min="50" max="200" step="5" value="100" aria-label="Print speed" disabled>
+            <span id="speed-value" class="speed-value">--</span>
+            <button id="speed-reset" class="speed-reset" type="button" title="Back to the speed as sliced" disabled>100 %</button>
+          </div>
         </div>
       </div>
     `,
@@ -427,12 +433,12 @@ const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
   'temp-control': { x: 3, y: 6, w: 3, h: 2 },
   'creator5-temperature': { x: 3, y: 6, w: 3, h: 5 },
   'ifs-station': { x: 0, y: 8, w: 3, h: 3 },
-  'job-progress': { x: 6, y: 6, w: 6, h: 2 },
-  'job-details': { x: 6, y: 8, w: 3, h: 3 },
-  'model-preview': { x: 9, y: 8, w: 3, h: 3 },
-  'gcode-viewer': { x: 0, y: 11, w: 12, h: 6 },
-  'filtration-tvoc': { x: 0, y: 17, w: 3, h: 2 },
-  'spoolman-tracker': { x: 3, y: 17, w: 3, h: 2 },
+  'job-progress': { x: 6, y: 6, w: 6, h: 3 },
+  'job-details': { x: 6, y: 9, w: 3, h: 3 },
+  'model-preview': { x: 9, y: 9, w: 3, h: 3 },
+  'gcode-viewer': { x: 0, y: 12, w: 12, h: 6 },
+  'filtration-tvoc': { x: 0, y: 18, w: 3, h: 2 },
+  'spoolman-tracker': { x: 3, y: 18, w: 3, h: 2 },
 };
 
 const COMPONENT_IDS = Object.keys(COMPONENT_DEFINITIONS);

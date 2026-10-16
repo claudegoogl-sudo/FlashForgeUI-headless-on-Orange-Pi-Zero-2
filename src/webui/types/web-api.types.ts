@@ -101,6 +101,7 @@ export interface PrinterStatusData {
   readonly filtrationMode: 'external' | 'internal' | 'none';
   readonly estimatedWeight?: number;
   readonly estimatedLength?: number;
+  readonly printSpeed?: number; // Print speed override in percent (100 = as sliced)
   readonly thumbnailData: string | null; // Base64 encoded thumbnail, null if not available
   readonly cumulativeFilament?: number; // Total lifetime filament usage in meters
   readonly cumulativePrintTime?: number; // Total lifetime print time in minutes

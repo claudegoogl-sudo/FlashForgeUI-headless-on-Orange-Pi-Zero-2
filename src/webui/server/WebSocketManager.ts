@@ -520,6 +520,7 @@ export class WebSocketManager extends EventEmitter {
           : undefined,
       filtrationMode: filtrationMode,
       // Weight and length from job progress
+      printSpeed: status.settings?.speedOffset || undefined,
       estimatedWeight: currentJob?.progress.weightUsed || undefined,
       estimatedLength: currentJob?.progress.lengthUsed || undefined,
       thumbnailData: data.thumbnailData || null, // Include thumbnail data

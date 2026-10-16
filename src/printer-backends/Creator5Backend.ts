@@ -19,15 +19,27 @@
  * - Creator5Backend class: Backend for Creator 5 / Creator 5 Pro printers
  */
 
-import { type Creator5MaterialMapping, FiveMClient, type FFMachineInfo } from '@ghosttypes/ff-api';
+import {
+  Commands,
+  type Creator5MaterialMapping,
+  type FFMachineInfo,
+  FiveMClient,
+} from '@ghosttypes/ff-api';
 import * as path from 'path';
 import type {
+  CommandResult,
   JobOperationParams,
   JobStartResult,
   MaterialStationStatus,
   PrinterFeatureSet,
 } from '../types/printer-backend';
 import { AD5XBackend } from './AD5XBackend';
+
+/** `printerCtl_cmd` value meaning "leave this setting unchanged". */
+const PRINTER_CTL_NO_CHANGE = -200;
+/** Print speed override range offered by the WebUI (percent). */
+export const PRINT_SPEED_MIN = 50;
+export const PRINT_SPEED_MAX = 200;
 
 /**
  * Backend implementation for the Creator 5 / Creator 5 Pro. Extends the AD5X
@@ -131,6 +143,47 @@ export class Creator5Backend extends AD5XBackend {
   }
 
   /**
+   * Set the print speed override (percent) of the running job.
+   *
+   * Sends `printerCtl_cmd` as a partial update: the Creator 5 firmware ignores any
+   * field sent as -200, so the Z offset and both fan speeds are left exactly as the
+   * user set them. Sending 0 (or the library's defaults of 0 / 100 / 100) would
+   * reset them mid-print, which is why this does not use `Control.setSpeedOverride`.
+   * Field semantics: flashforge-api-docs endpoints_creator5_1.9.2.yaml (PrinterCtlCmd).
+   */
+  public async setPrintSpeed(percent: number): Promise<CommandResult> {
+    if (!Number.isInteger(percent) || percent < PRINT_SPEED_MIN || percent > PRINT_SPEED_MAX) {
+      return {
+        success: false,
+        error: `Print speed must be a whole number from ${PRINT_SPEED_MIN} to ${PRINT_SPEED_MAX} %`,
+        timestamp: new Date(),
+      };
+    }
+    try {
+      const success = await this.fiveMClient.control.sendControlCommand(
+        Commands.PrinterControlCmd,
+        {
+          zAxisCompensation: PRINTER_CTL_NO_CHANGE,
+          speed: percent,
+          chamberFan: PRINTER_CTL_NO_CHANGE,
+          coolingFan: PRINTER_CTL_NO_CHANGE,
+        }
+      );
+      return {
+        success,
+        error: success ? undefined : 'The printer rejected the speed command',
+        timestamp: new Date(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date(),
+      };
+    }
+  }
+
+  /**
    * Start a job on the Creator 5 / Creator 5 Pro.
    *
    * A fresh file upload goes through the two-step material flow
@@ -168,7 +221,11 @@ export class Creator5Backend extends AD5XBackend {
         };
       }
 
-      const started = await this.startCreator5Print(params.fileName, params.leveling, materialMappings);
+      const started = await this.startCreator5Print(
+        params.fileName,
+        params.leveling,
+        materialMappings
+      );
       if (!started) {
         throw new Error('Failed to start Creator 5 job');
       }
@@ -232,7 +289,11 @@ export class Creator5Backend extends AD5XBackend {
       }
 
       if (startPrint) {
-        const started = await this.startCreator5Print(fileName, levelingBeforePrint, materialMappings);
+        const started = await this.startCreator5Print(
+          fileName,
+          levelingBeforePrint,
+          materialMappings
+        );
         if (!started) {
           throw new Error('Failed to start Creator 5 job after upload');
         }
@@ -267,7 +328,8 @@ export class Creator5Backend extends AD5XBackend {
     return await this.fiveMClient.jobControl.startCreator5Job({
       fileName,
       levelingBeforePrint,
-      materialMappings: materialMappings && materialMappings.length > 0 ? materialMappings : undefined,
+      materialMappings:
+        materialMappings && materialMappings.length > 0 ? materialMappings : undefined,
     });
   }
 }

@@ -4,6 +4,11 @@
 
 import { FiveMClient } from '@ghosttypes/ff-api';
 import type { Response, Router } from 'express';
+import {
+  Creator5Backend,
+  PRINT_SPEED_MAX,
+  PRINT_SPEED_MIN,
+} from '../../../printer-backends/Creator5Backend';
 import { toAppError } from '../../../utils/error.utils';
 import type { StandardAPIResponse } from '../../types/web-api.types';
 import type { AuthenticatedRequest } from '../auth-middleware';
@@ -73,6 +78,69 @@ export function registerPrinterControlRoutes(router: Router, deps: RouteDependen
 
   router.post('/printer/control/led-off', async (req: AuthenticatedRequest, res: Response) => {
     await handleLedControl(req, res, deps, false);
+  });
+
+  router.post('/printer/control/speed', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const contextResult = resolveContext(req, deps, {
+        requireBackendReady: true,
+        requireBackendInstance: true,
+      });
+      if (!contextResult.success) {
+        return sendErrorResponse<StandardAPIResponse>(
+          res,
+          contextResult.statusCode,
+          contextResult.error
+        );
+      }
+
+      const backend = contextResult.backend;
+      if (!(backend instanceof Creator5Backend)) {
+        return sendErrorResponse<StandardAPIResponse>(
+          res,
+          400,
+          'Print speed control is only available on the Creator 5 series'
+        );
+      }
+
+      const speed = (req.body as { speed?: unknown } | undefined)?.speed;
+      if (
+        typeof speed !== 'number' ||
+        !Number.isInteger(speed) ||
+        speed < PRINT_SPEED_MIN ||
+        speed > PRINT_SPEED_MAX
+      ) {
+        return sendErrorResponse<StandardAPIResponse>(
+          res,
+          400,
+          `speed must be a whole number from ${PRINT_SPEED_MIN} to ${PRINT_SPEED_MAX}`
+        );
+      }
+
+      // The printer only applies the override to a running job.
+      const statusResult = await deps.backendManager.getPrinterStatus(contextResult.contextId);
+      const printerState = statusResult.success
+        ? statusResult.status?.printerState?.toLowerCase()
+        : undefined;
+      if (printerState !== 'printing' && printerState !== 'paused') {
+        return sendErrorResponse<StandardAPIResponse>(
+          res,
+          409,
+          'The print speed can only be changed while a job is printing or paused'
+        );
+      }
+
+      const result = await backend.setPrintSpeed(speed);
+      const response: StandardAPIResponse = {
+        success: result.success,
+        message: result.success ? `Print speed set to ${speed} %` : undefined,
+        error: result.error,
+      };
+      return res.status(result.success ? 200 : 502).json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      return sendErrorResponse<StandardAPIResponse>(res, 500, appError.message);
+    }
   });
 
   router.post('/printer/control/clear-status', async (req: AuthenticatedRequest, res: Response) => {

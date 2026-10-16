@@ -4205,3 +4205,37 @@ body {
   min-height: 1.2em;
 }
 
+/* Print speed override */
+.speed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.speed-slider {
+  flex: 1;
+  min-width: 80px;
+}
+
+.speed-value {
+  min-width: 3.6em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.speed-reset {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg-hover);
+  color: var(--text-color);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.speed-reset:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
