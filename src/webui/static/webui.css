@@ -4239,3 +4239,93 @@ body {
   cursor: not-allowed;
 }
 
+/* Light timer */
+.light-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.light-timer-state {
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
+.light-timer-state.on {
+  color: var(--warning-color);
+}
+
+.light-timer-clock {
+  font-size: 12px;
+  color: var(--text-color-muted);
+}
+
+.light-timer-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.light-timer-sub {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-color-secondary);
+}
+
+.light-timer-time {
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--darker-bg);
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.light-timer-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.light-timer-btn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg-hover);
+  color: var(--text-color);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.light-timer-btn:hover {
+  border-color: var(--accent-color);
+}
+
+.light-timer-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--theme-primary) 14%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.light-timer-note {
+  color: var(--text-color-secondary);
+}
+
+/* The app's .hidden must win over the display values set above */
+.gcode-view-controls.hidden,
+.light-timer-countdown.hidden,
+.speed-row.hidden {
+  display: none;
+}
+

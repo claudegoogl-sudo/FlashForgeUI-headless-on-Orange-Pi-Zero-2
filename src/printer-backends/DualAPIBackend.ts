@@ -430,6 +430,7 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
         estimatedRightLen: finalEstimatedRightLen,
         estimatedRightWeight: finalEstimatedRightWeight,
         printEta: machineInfo?.PrintEta || undefined,
+        lightOn: machineInfo?.LightsOn,
         completionTime: machineInfo?.CompletionTime ?? null,
         cumulativePrintTime: machineInfo?.CumulativePrintTime || 0,
         cumulativeFilament: machineInfo?.CumulativeFilament || 0,

@@ -11,6 +11,7 @@ export class WebUIMobileLayoutManager {
     'camera',
     'job-progress',
     'gcode-viewer',
+    'light-timer',
     'controls',
     'printer-state',
     'temp-control',

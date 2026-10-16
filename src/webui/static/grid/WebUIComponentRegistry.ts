@@ -89,6 +89,13 @@ const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
     minSize: { w: 3, h: 3 },
     defaultPosition: { x: 0, y: 11 },
   },
+  'light-timer': {
+    id: 'light-timer',
+    displayName: 'Light Timer',
+    defaultSize: { w: 3, h: 4 },
+    minSize: { w: 2, h: 3 },
+    defaultPosition: { x: 6, y: 18 },
+  },
   'spoolman-tracker': {
     id: 'spoolman-tracker',
     displayName: 'Spoolman Tracker',
@@ -315,6 +322,39 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
       </div>
     `,
   },
+  'light-timer': {
+    id: 'light-timer',
+    html: `
+      <div class="panel" id="light-timer-panel">
+        <div class="panel-header">Light Timer</div>
+        <div class="panel-content" id="light-timer-content">
+          <div id="light-timer-unsupported" class="light-timer-note hidden">This printer has no controllable light.</div>
+          <div id="light-timer-body">
+            <div class="light-timer-row">
+              <span>Light: <span id="light-timer-state" class="light-timer-state">--</span></span>
+              <span id="light-timer-clock" class="light-timer-clock"></span>
+            </div>
+            <div class="light-timer-row">
+              <label class="light-timer-check"><input type="checkbox" id="light-timer-daily-enabled"> Turn off daily at</label>
+              <input type="time" id="light-timer-daily-time" class="light-timer-time" value="22:00">
+            </div>
+            <label class="light-timer-check light-timer-sub"><input type="checkbox" id="light-timer-skip"> Not on days when a print is running</label>
+            <div class="light-timer-quick">
+              <span>Turn off in</span>
+              <button type="button" class="light-timer-btn" data-off-in="30">30 min</button>
+              <button type="button" class="light-timer-btn" data-off-in="60">1 h</button>
+              <button type="button" class="light-timer-btn" data-off-in="120">2 h</button>
+              <button type="button" class="light-timer-btn" data-off-in="240">4 h</button>
+            </div>
+            <div id="light-timer-countdown" class="light-timer-countdown hidden">
+              <span id="light-timer-countdown-text"></span>
+              <button type="button" id="light-timer-cancel" class="light-timer-btn">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+  },
   'gcode-viewer': {
     id: 'gcode-viewer',
     html: `
@@ -437,8 +477,9 @@ const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
   'job-details': { x: 6, y: 9, w: 3, h: 3 },
   'model-preview': { x: 9, y: 9, w: 3, h: 3 },
   'gcode-viewer': { x: 0, y: 12, w: 12, h: 6 },
-  'filtration-tvoc': { x: 0, y: 18, w: 3, h: 2 },
-  'spoolman-tracker': { x: 3, y: 18, w: 3, h: 2 },
+  'light-timer': { x: 0, y: 18, w: 3, h: 4 },
+  'filtration-tvoc': { x: 3, y: 18, w: 3, h: 2 },
+  'spoolman-tracker': { x: 6, y: 18, w: 3, h: 2 },
 };
 
 const COMPONENT_IDS = Object.keys(COMPONENT_DEFINITIONS);

@@ -22,6 +22,7 @@ import { getPrinterContextManager } from './managers/PrinterContextManager';
 import { resolveAndEnsureCameraStream } from './services/CameraStreamCoordinator';
 import { getDiscordNotificationService } from './services/discord';
 import { getGo2rtcService } from './services/Go2rtcService';
+import { getLightTimerService } from './services/LightTimerService';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
 import { getMultiContextPrintStateMonitor } from './services/MultiContextPrintStateMonitor';
 import { getMultiContextSpoolmanTracker } from './services/MultiContextSpoolmanTracker';
@@ -400,6 +401,8 @@ async function shutdown(): Promise<void> {
     await go2rtcService.shutdown();
     console.log('[Shutdown] Camera streaming stopped');
 
+    getLightTimerService().stop();
+
     // Step 5: Stop WebUI (with timeout and force-close fallback)
     console.log('[Shutdown] Step 5/5: Stopping WebUI...');
     await webUIManager.stop(SHUTDOWN_CONFIG.WEBUI_STOP_TIMEOUT_MS);
@@ -622,6 +625,9 @@ async function main(): Promise<void> {
     if (connectedContexts.length > 0) {
       await reconcileConnectedCameraStreams();
     }
+
+    // 14b. Light timer (daily auto-off and off-in-N-minutes; works with no browser open)
+    await getLightTimerService().start();
 
     // 15. Setup signal handlers
     setupSignalHandlers();

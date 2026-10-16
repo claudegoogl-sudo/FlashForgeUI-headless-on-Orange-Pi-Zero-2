@@ -43,6 +43,7 @@ import {
 } from './features/context-switching.js';
 import { setupFileLibraryHandlers } from './features/file-library.js';
 import { setupGcodeViewer } from './features/gcode-viewer.js';
+import { setupLightTimer } from './features/light-timer.js';
 import { setupPrintSpeed } from './features/print-speed.js';
 import { refreshFileManagerButton, setupFileManager } from './features/file-manager.js';
 import { refreshIfsStationCard, setupIfsStationCard } from './features/ifs-station.js';
@@ -532,6 +533,7 @@ async function initialize(): Promise<void> {
   setupJobUpload();
   setupFileLibraryHandlers();
   setupGcodeViewer();
+  setupLightTimer();
   setupPrintSpeed();
   setupSpoolmanHandlers();
   setupIfsStationCard();
