@@ -10,7 +10,7 @@
  * Key exports:
  * - createAuthMiddleware(): Required authentication for protected routes
  * - createOptionalAuthMiddleware(): Optional authentication that checks but doesn't require tokens
- * - createLoginRateLimiter(): Rate limiting for login endpoint (5 attempts per 15 minutes)
+ * - createLoginRateLimiter(): Rate limiting for login endpoint (5 failed attempts per 15 minutes)
  * - createErrorMiddleware(): Centralized error handling with standardized responses
  * - createRequestLogger(): Request logging with method, path, status code, and duration
  * - AuthenticatedRequest: Extended Request interface with auth property
@@ -143,8 +143,16 @@ export function createLoginRateLimiter() {
       return;
     }
 
-    // Increment attempt count
+    // Count the attempt, but give it back when the login succeeds: only failed
+    // attempts add up towards the lockout, so several devices or tabs logging in
+    // (or a restart that logs everyone out) cannot lock the owner out.
     record.count++;
+    const counted = record;
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300 && counted.count > 0) {
+        counted.count--;
+      }
+    });
 
     // Clean up old entries periodically
     if (Math.random() < 0.1) {

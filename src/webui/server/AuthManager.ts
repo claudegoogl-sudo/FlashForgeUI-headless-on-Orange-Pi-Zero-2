@@ -17,8 +17,11 @@
  * - Cleanup: Automatic session expiration every 5 minutes, manual clearAllSessions
  */
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as crypto from 'crypto';
 import { getConfigManager } from '../../managers/ConfigManager';
+import { getDataPath } from '../../utils/setup';
 import { validateAuthToken } from '../schemas/web-api.schemas';
 import type {
   WebUIAuthStatus,
@@ -47,18 +50,106 @@ interface SessionInfo {
   readonly persistent: boolean;
 }
 
+/** Session as written to <data dir>/sessions.json */
+interface StoredSession {
+  readonly sessionId: string;
+  readonly token: string;
+  readonly createdAt: number;
+  readonly expiresAt: number;
+  readonly persistent: boolean;
+}
+
+/** "Remember me" sessions last this long (30 days); others last one hour. */
+const REMEMBERED_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
+
+function defaultSessionsFile(): string | null {
+  if (process.env.NODE_ENV === 'test') return null; // tests must not write into ./data
+  try {
+    return path.join(getDataPath(), 'sessions.json');
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Authentication manager for web UI
+ *
+ * Sessions are kept in memory and mirrored to <data dir>/sessions.json (mode 600), so
+ * a restart or an update of the server no longer logs everyone out. A stored session is
+ * only honoured while its token still verifies against the current password.
  */
 export class AuthManager {
   private readonly configManager = getConfigManager();
   private readonly sessions = new Map<string, SessionInfo>();
-  private readonly sessionTimeout = 24 * 60 * 60 * 1000; // 24 hours for persistent
+  private readonly sessionTimeout = REMEMBERED_SESSION_MS; // 30 days for "remember me"
   private readonly tempSessionTimeout = 60 * 60 * 1000; // 1 hour for temporary
   private cleanupInterval: NodeJS.Timeout | null = null;
 
-  constructor() {
+  private readonly sessionsFile: string | null;
+
+  /**
+   * @param sessionsFile file mirroring the sessions; null disables persistence
+   *                     (default: <data dir>/sessions.json, off under tests)
+   */
+  constructor(sessionsFile: string | null = defaultSessionsFile()) {
+    this.sessionsFile = sessionsFile;
+    this.loadSessions();
     this.startSessionCleanup();
+  }
+
+  private loadSessions(): void {
+    if (!this.sessionsFile) return;
+    try {
+      const raw = JSON.parse(fs.readFileSync(this.sessionsFile, 'utf8')) as {
+        sessions?: StoredSession[];
+      };
+      const now = Date.now();
+      for (const stored of raw.sessions ?? []) {
+        if (
+          typeof stored?.sessionId !== 'string' ||
+          typeof stored.token !== 'string' ||
+          typeof stored.createdAt !== 'number' ||
+          typeof stored.expiresAt !== 'number' ||
+          stored.expiresAt <= now
+        ) {
+          continue;
+        }
+        this.sessions.set(stored.sessionId, {
+          token: stored.token,
+          createdAt: new Date(stored.createdAt),
+          expiresAt: new Date(stored.expiresAt),
+          lastActivity: new Date(stored.createdAt),
+          persistent: stored.persistent === true,
+        });
+      }
+    } catch {
+      // no file yet, or unreadable: start with no sessions
+    }
+  }
+
+  private saveSessions(): void {
+    if (!this.sessionsFile) return;
+    try {
+      const sessions: StoredSession[] = [];
+      for (const [sessionId, info] of this.sessions.entries()) {
+        sessions.push({
+          sessionId,
+          token: info.token,
+          createdAt: info.createdAt.getTime(),
+          expiresAt: info.expiresAt.getTime(),
+          persistent: info.persistent,
+        });
+      }
+      fs.mkdirSync(path.dirname(this.sessionsFile), { recursive: true });
+      const temporary = `${this.sessionsFile}.${process.pid}.tmp`;
+      fs.writeFileSync(temporary, JSON.stringify({ version: 1, sessions }), { mode: 0o600 });
+      fs.renameSync(temporary, this.sessionsFile);
+    } catch (error) {
+      console.warn(
+        '[Auth] Could not save sessions:',
+        error instanceof Error ? error.message : error
+      );
+    }
   }
 
   /**
@@ -123,6 +214,7 @@ export class AuthManager {
     };
 
     this.sessions.set(sessionId, sessionInfo);
+    this.saveSessions();
 
     return token;
   }
@@ -159,6 +251,7 @@ export class AuthManager {
 
       if (payload.expiresAt < Date.now()) {
         this.sessions.delete(payload.sessionId);
+        this.saveSessions();
         return { isValid: false };
       }
 
@@ -261,6 +354,7 @@ export class AuthManager {
       const payload = JSON.parse(Buffer.from(parts[0], 'base64').toString()) as TokenPayload;
 
       this.sessions.delete(payload.sessionId);
+      this.saveSessions();
     } catch {
       // Ignore errors during revocation
     }
@@ -278,6 +372,7 @@ export class AuthManager {
    */
   public clearAllSessions(): void {
     this.sessions.clear();
+    this.saveSessions();
   }
 
   /**
@@ -307,12 +402,15 @@ export class AuthManager {
     this.cleanupInterval = setInterval(
       () => {
         const now = Date.now();
+        let removed = false;
 
         for (const [sessionId, session] of this.sessions.entries()) {
           if (session.expiresAt.getTime() < now) {
             this.sessions.delete(sessionId);
+            removed = true;
           }
         }
+        if (removed) this.saveSessions();
       },
       5 * 60 * 1000
     );
