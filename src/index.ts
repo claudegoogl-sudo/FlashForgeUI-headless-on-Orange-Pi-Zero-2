@@ -19,6 +19,7 @@ import { getConfigManager } from './managers/ConfigManager';
 import { getConnectionFlowManager } from './managers/ConnectionFlowManager';
 import { getPrinterBackendManager } from './managers/PrinterBackendManager';
 import { getPrinterContextManager } from './managers/PrinterContextManager';
+import { getAutoSyncService } from './services/AutoSyncService';
 import { resolveAndEnsureCameraStream } from './services/CameraStreamCoordinator';
 import { getDiscordNotificationService } from './services/discord';
 import { getGo2rtcService } from './services/Go2rtcService';
@@ -402,6 +403,7 @@ async function shutdown(): Promise<void> {
     console.log('[Shutdown] Camera streaming stopped');
 
     getLightTimerService().stop();
+    getAutoSyncService().stop();
 
     // Step 5: Stop WebUI (with timeout and force-close fallback)
     console.log('[Shutdown] Step 5/5: Stopping WebUI...');
@@ -628,6 +630,9 @@ async function main(): Promise<void> {
 
     // 14b. Light timer (daily auto-off and off-in-N-minutes; works with no browser open)
     await getLightTimerService().start();
+
+    // 14c. Job library auto-sync (queued library files are uploaded to an idle printer)
+    await getAutoSyncService().start();
 
     // 15. Setup signal handlers
     setupSignalHandlers();

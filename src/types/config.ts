@@ -19,6 +19,8 @@
  * - WebUI Server: WebUIEnabled, WebUIPort, WebUIPassword, WebUIPasswordRequired
  * - Discord: DiscordSync, WebhookUrl, DiscordUpdateIntervalMinutes
  * - Spoolman: SpoolmanEnabled, SpoolmanServerUrl, SpoolmanUpdateMode
+ * - Job library auto-sync: AutoSyncEnabled, AutoSyncCleanupEnabled, AutoSyncCleanupDryRun,
+ *   AutoSyncCleanupKeepNewest
  * - Advanced: DebugMode
  * - Theme: WebUITheme
  *
@@ -59,6 +61,12 @@ export interface AppConfig {
   readonly SpoolmanServerUrl: string;
   readonly SpoolmanUpdateMode: 'length' | 'weight';
 
+  // Job library auto-sync (see AutoSyncService)
+  readonly AutoSyncEnabled: boolean;
+  readonly AutoSyncCleanupEnabled: boolean;
+  readonly AutoSyncCleanupDryRun: boolean;
+  readonly AutoSyncCleanupKeepNewest: number;
+
   // Advanced
   readonly DebugMode: boolean;
 
@@ -81,6 +89,10 @@ export interface MutableAppConfig {
   SpoolmanEnabled: boolean;
   SpoolmanServerUrl: string;
   SpoolmanUpdateMode: 'length' | 'weight';
+  AutoSyncEnabled: boolean;
+  AutoSyncCleanupEnabled: boolean;
+  AutoSyncCleanupDryRun: boolean;
+  AutoSyncCleanupKeepNewest: number;
   DebugMode: boolean;
   WebUITheme: ThemeColors;
 }
@@ -116,6 +128,12 @@ export const DEFAULT_CONFIG: AppConfig = {
   SpoolmanEnabled: false,
   SpoolmanServerUrl: '',
   SpoolmanUpdateMode: 'weight',
+
+  // Job library auto-sync
+  AutoSyncEnabled: true,
+  AutoSyncCleanupEnabled: false,
+  AutoSyncCleanupDryRun: true,
+  AutoSyncCleanupKeepNewest: 15,
 
   // Advanced
   DebugMode: false,
@@ -187,7 +205,11 @@ type NumberConfigKey = {
 }[keyof MutableAppConfig];
 
 function isNumberConfigKey(key: keyof MutableAppConfig): key is NumberConfigKey {
-  return key === 'WebUIPort' || key === 'DiscordUpdateIntervalMinutes';
+  return (
+    key === 'WebUIPort' ||
+    key === 'DiscordUpdateIntervalMinutes' ||
+    key === 'AutoSyncCleanupKeepNewest'
+  );
 }
 
 /**
