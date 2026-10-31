@@ -44,6 +44,15 @@ export function updateConnectionStatus(connected: boolean): void {
   const stale = hasBeenConnected && !connected;
   $('connection-banner')?.classList.toggle('hidden', !stale);
   $('main-content')?.toggleAttribute('data-stale', stale);
+  if (stale) {
+    // The next status update after reconnecting re-enables what the printer state allows.
+    document
+      .querySelectorAll<HTMLButtonElement>('#control-grid button, .temp-btn, .filtration-btn')
+      .forEach((button) => {
+        button.disabled = true;
+        button.title = 'Not connected to the WebUI server';
+      });
+  }
 }
 
 $('connection-reload')?.addEventListener('click', () => window.location.reload());
@@ -305,9 +314,11 @@ export function updateCreator5TemperatureCard(status: PrinterStatus | null): voi
   }
 
   const disabled = isHeaterControlDisabled(status.printerState || 'Unknown');
+  body?.classList.toggle('heaters-locked', disabled);
+  $('c5-heater-lock')?.classList.toggle('hidden', !disabled);
   panel.querySelectorAll<HTMLButtonElement>('button[data-c5-action]').forEach((btn) => {
     btn.disabled = disabled;
-    btn.title = disabled ? 'Heaters are locked while a job is running' : '';
+    btn.title = disabled ? 'Heaters are locked while the printer is printing or busy' : '';
   });
 }
 
@@ -579,13 +590,13 @@ function describeDeduction(deduction: DeductionSummary | null): string {
 /** One line that says why some controls are unavailable right now. */
 function describeControlsState(printerState: string, ready: boolean, busy: boolean): string {
   if (printerState === 'Printing' || printerState === 'Heating' || printerState === 'Calibrating') {
-    return 'A job is running. Uploading, files and heater changes wait until it ends.';
+    return 'A job is running. Upload job, files and heaters are locked until it ends.';
   }
   if (printerState === 'Paused' || printerState === 'Pausing') {
     return 'The job is paused. Resume it or cancel it.';
   }
   if (printerState === 'Error') {
-    return 'The printer reports an error. Fix it on the printer, then clear the status under More.';
+    return 'The printer reports an error. Fix it on the printer, then select Clear status.';
   }
   if (busy) {
     return 'The printer is busy.';
@@ -685,6 +696,17 @@ function updateButtonStates(printerState: string): void {
   const hint = $('controls-hint');
   if (hint) {
     hint.textContent = describeControlsState(printerState, isReadyForNewJob, isBusy);
+    hint.dataset.tone = printerState === 'Error' ? 'danger' : '';
+  }
+  const more = document.querySelector<HTMLDetailsElement>('.ctl-more');
+  if (more) {
+    // In an error the Clear status button must be in view; opened once per error.
+    if (printerState !== 'Error') {
+      delete more.dataset.autoOpened;
+    } else if (!more.dataset.autoOpened) {
+      more.dataset.autoOpened = 'true';
+      more.open = true;
+    }
   }
 
   const bedSetBtn = $('btn-bed-set') as HTMLButtonElement | null;

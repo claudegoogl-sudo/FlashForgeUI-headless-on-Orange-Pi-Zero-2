@@ -132,7 +132,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
         <h2 class="panel-header">Controls</h2>
         <div class="panel-content">
           <div class="ctl-job">
-            <button id="btn-pause" class="control-btn primary" type="button">Pause</button>
+            <button id="btn-pause" class="control-btn" type="button">Pause</button>
             <button id="btn-resume" class="control-btn primary" type="button" hidden>Resume</button>
           </div>
           <div class="ctl-group" role="group" aria-label="Light">
@@ -226,6 +226,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
             Per-tool temperature control is not available for this printer.
           </div>
           <div class="c5-temps-body" id="c5-temps-body">
+            <p class="heater-lock hidden" id="c5-heater-lock">Heaters are locked while the printer is printing or busy.</p>
             <div class="c5-tool-grid" id="c5-tool-grid"></div>
             <div class="temp-row" id="c5-bed-row">
               <span class="temp-label">Bed</span>

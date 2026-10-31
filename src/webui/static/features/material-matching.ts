@@ -662,7 +662,7 @@ export async function openMaterialMatchingModal(
   });
 
   if (title) {
-    title.textContent = `Match Materials – ${pending.job.displayName || pending.job.fileName}`;
+    title.textContent = `Match materials – ${pending.job.displayName || pending.job.fileName}`;
   }
 
   renderMaterialRequirements(pending.job);

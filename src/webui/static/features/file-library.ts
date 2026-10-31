@@ -193,7 +193,9 @@ function renderLibrary(list: HTMLElement, files: LibraryFile[]): void {
     return;
   }
 
-  for (const file of files) {
+  // The file that is printing now comes first.
+  const ordered = [...files].sort((a, b) => Number(isRunningJob(b.name)) - Number(isRunningJob(a.name)));
+  for (const file of ordered) {
     const item = document.createElement('div');
     item.className = 'lib-item';
     item.dataset.name = file.name;
@@ -234,7 +236,7 @@ function renderLibrary(list: HTMLElement, files: LibraryFile[]): void {
 
     const actions = document.createElement('div');
     actions.className = 'lib-actions';
-    actions.appendChild(makeButton('Print…', 'print', file.name, 'lib-primary'));
+    actions.appendChild(makeButton('Print…', 'print', file.name));
     actions.appendChild(makeButton('Send to printer', 'send', file.name));
     actions.appendChild(makeButton('View', 'view', file.name));
     actions.appendChild(makeButton('Download', 'download', file.name));

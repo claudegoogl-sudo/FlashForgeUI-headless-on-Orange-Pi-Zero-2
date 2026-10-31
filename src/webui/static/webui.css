@@ -1255,8 +1255,7 @@ input[type="checkbox"] {
     min-width: 0;
   }
 
-  .edit-mode-toggle,
-  .settings-button {
+  .edit-mode-toggle {
     display: none;
   }
 
@@ -5347,4 +5346,76 @@ input[type="range"] {
 
 .job-upload-meta-group.print-time-highlight .job-upload-meta-title {
   color: var(--ink);
+}
+
+.job-upload-warning-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: var(--t-1);
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---------- Critique pass ---------- */
+.heater-lock {
+  font-size: var(--t-1);
+  color: var(--pencil);
+}
+
+.heaters-locked .temp-buttons {
+  display: none;
+}
+
+.ctl-hint[data-tone="danger"] {
+  color: var(--danger);
+}
+
+[data-stale] .state-dot {
+  background-color: transparent;
+  border-color: var(--pencil);
+}
+
+.light-timer-state.on {
+  color: var(--ink);
+}
+
+.grid-stack.edit-mode::after {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--ink) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 12%, transparent) 1px, transparent 1px);
+}
+
+.grid-stack.edit-mode .panel {
+  outline-color: var(--pencil);
+}
+
+/* the title block rests on a heavier rule */
+.grid-stack-item[data-component-id="printer-state"] .panel,
+.grid-stack-item[data-component-id="job-progress"] .panel,
+.grid-stack-item[data-component-id="job-details"] .panel {
+  border-bottom: 2px solid var(--rule-strong);
+}
+
+#progress-bar::-webkit-progress-bar {
+  background:
+    linear-gradient(var(--ink), var(--ink)) left bottom / 1px 100% no-repeat,
+    linear-gradient(var(--ink), var(--ink)) right bottom / 1px 100% no-repeat,
+    repeating-linear-gradient(to right, var(--pencil) 0 1px, transparent 1px 10%) left bottom / 100% 8px no-repeat,
+    linear-gradient(var(--pencil), var(--pencil)) left bottom / 100% 1px no-repeat;
+}
+
+@media (max-width: 768px) {
+  .settings-button {
+    display: inline-flex;
+  }
+
+  .progress-number {
+    font-size: var(--t-7);
+  }
 }

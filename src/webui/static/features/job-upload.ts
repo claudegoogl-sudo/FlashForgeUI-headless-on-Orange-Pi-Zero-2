@@ -627,7 +627,7 @@ function renderWarnings(warnings: readonly UploadSliceWarning[]): void {
     const levelClass =
       warning.level >= 2 ? 'level-error' : warning.level >= 1 ? 'level-warning' : 'level-info';
     icon.className = `job-upload-warning-icon ${levelClass}`;
-    icon.textContent = warning.level >= 2 ? '⚠' : 'ℹ';
+    icon.textContent = warning.level >= 2 ? '!' : 'i';
 
     const message = document.createElement('span');
     message.className = 'job-upload-warning-msg';
