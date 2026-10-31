@@ -825,4 +825,5 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 // Tool tiles take their colour from the material station; redraw them when it reports.
 document.addEventListener('station-updated', () => {
   updateCreator5TemperatureCard(state.printerStatus ?? null);
+  updateToolStrip(state.printerStatus ?? null);
 });

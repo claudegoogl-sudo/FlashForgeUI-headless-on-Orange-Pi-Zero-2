@@ -142,11 +142,11 @@
         </div>
 
         <nav class="dock" id="dock" aria-label="Sections">
-          <button type="button" class="dock-btn" data-view-target="print" style="--h:210"><i data-lucide="box" aria-hidden="true"></i><span>Print</span></button>
-          <button type="button" class="dock-btn" data-view-target="heat" style="--h:28"><i data-lucide="thermometer" aria-hidden="true"></i><span>Heat</span></button>
-          <button type="button" class="dock-btn" data-view-target="move" style="--h:140"><i data-lucide="move" aria-hidden="true"></i><span>Move</span></button>
-          <button type="button" class="dock-btn" data-view-target="files" style="--h:270"><i data-lucide="folder" aria-hidden="true"></i><span>Files</span></button>
-          <button type="button" class="dock-btn" data-view-target="light" style="--h:45"><i data-lucide="lightbulb" aria-hidden="true"></i><span>Light</span></button>
+          <button type="button" class="dock-btn" data-view-target="print" style="--h:210;--l:58%;"><i data-lucide="box" aria-hidden="true"></i><span>Print</span></button>
+          <button type="button" class="dock-btn" data-view-target="heat" style="--h:28;--l:52%;"><i data-lucide="thermometer" aria-hidden="true"></i><span>Heat</span></button>
+          <button type="button" class="dock-btn" data-view-target="move" style="--h:140;--l:44%;"><i data-lucide="move" aria-hidden="true"></i><span>Move</span></button>
+          <button type="button" class="dock-btn" data-view-target="files" style="--h:270;--l:42%;--on:#fff;"><i data-lucide="folder" aria-hidden="true"></i><span>Files</span></button>
+          <button type="button" class="dock-btn" data-view-target="light" style="--h:45;--l:46%;"><i data-lucide="lightbulb" aria-hidden="true"></i><span>Light</span></button>
           <button id="settings-button" class="dock-gear" type="button" aria-haspopup="dialog" aria-controls="settings-modal" title="Settings" aria-label="Settings"><i data-lucide="settings" aria-hidden="true"></i></button>
         </nav>
       </main>
@@ -157,7 +157,7 @@
           <div class="modal-header">
             <h2 id="confirm-title">Are you sure?</h2>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <p id="confirm-message"></p>
           </div>
           <div class="modal-footer">
@@ -174,7 +174,7 @@
             <h2 id="settings-modal-title">Settings</h2>
             <button id="close-settings" class="close-btn" aria-label="Close settings" type="button">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <section class="settings-section">
               <h3>Colors</h3>
               <p class="help-text">Change the color scheme. Colors apply when you select Apply colors.</p>
@@ -250,7 +250,7 @@
             <h2 id="modal-title">Select file</h2>
             <button id="close-modal" class="close-btn" type="button">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <div id="file-list" class="file-list"></div>
           </div>
           <div class="modal-footer">
@@ -274,7 +274,7 @@
             <h2 id="job-upload-title">Upload job</h2>
             <button id="job-upload-close" class="close-btn" type="button" aria-label="Close job uploader">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <div class="job-upload-file-section">
               <div class="job-upload-file-path" id="job-upload-file-path">No file selected…</div>
               <input type="file" id="job-upload-file-input" accept=".gcode,.gx,.3mf" class="hidden">
@@ -396,7 +396,7 @@
             <h2 id="material-matching-title">Match materials</h2>
             <button id="material-matching-close" class="close-btn" aria-label="Close material matching" type="button">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <p class="material-matching-description">
               Match each material used in your print to the corresponding material station slot. Material types must match (for example, PLA to PLA).
             </p>
@@ -437,7 +437,7 @@
             <h2 id="spoolman-modal-title">Select Spool</h2>
             <button id="spoolman-modal-close" class="close-btn" aria-label="Close spool selection" type="button">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <input
               type="text"
               id="spoolman-search"
@@ -465,7 +465,7 @@
             <h2 id="temp-dialog-title">Set Temperature</h2>
             <button id="close-temp-dialog" class="close-btn" type="button">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <p id="temp-dialog-message">Enter temperature (Â°C):</p>
             <input type="number" id="temp-input" min="0" max="300" step="5" value="0">
           </div>
@@ -483,7 +483,7 @@
             <h2 id="discovery-modal-title">Add Printer</h2>
             <button id="close-discovery" class="close-btn" aria-label="Close discovery" type="button">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <div class="discovery-tabs">
               <button class="discovery-tab-btn active" data-tab="scan" type="button">
                 <i data-lucide="wifi" aria-hidden="true"></i> Network Scan
@@ -981,7 +981,7 @@
             <h2 id="reboot-confirm-title">Reboot Printer?</h2>
             <button type="button" id="reboot-confirm-close" class="close-btn" aria-label="Close reboot confirmation">&times;</button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" tabindex="0">
             <p id="reboot-confirm-message">This will reboot the printer. Any active print will be interrupted.</p>
           </div>
           <div class="modal-footer">

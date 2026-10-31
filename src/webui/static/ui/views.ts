@@ -82,7 +82,14 @@ export function showView(view: ViewName, options: { stage?: StageName } = {}): v
     button.classList.toggle('on', on);
     if (on) {
       button.setAttribute('aria-current', 'page');
-      views.style.setProperty('--h', button.style.getPropertyValue('--h'));
+      for (const name of ['--h', '--l', '--on']) {
+        const value = button.style.getPropertyValue(name);
+        if (value) {
+          views.style.setProperty(name, value);
+        } else {
+          views.style.removeProperty(name);
+        }
+      }
     } else {
       button.removeAttribute('aria-current');
     }

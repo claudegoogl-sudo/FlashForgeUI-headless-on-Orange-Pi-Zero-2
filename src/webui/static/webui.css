@@ -18,7 +18,7 @@
   --ink: var(--theme-text, #e9e6dc);
   --action: var(--theme-primary, #e9e6dc);
   --dim: var(--theme-secondary, #5ed0e8);
-  --pencil: color-mix(in srgb, var(--ink) 68%, var(--film));
+  --pencil: color-mix(in srgb, var(--ink) 80%, var(--film));
   --faint: color-mix(in srgb, var(--ink) 44%, var(--film));
   --rule: color-mix(in srgb, var(--ink) 16%, var(--film));
   --rule-strong: color-mix(in srgb, var(--ink) 32%, var(--film));
@@ -31,6 +31,8 @@
   --chrome: #0b0d0f;
   --chrome-line: #2a3035;
   --tex: url("img/brushed.webp");
+  --l: 54%;
+  --on: #0b0e10;
   --r-panel: 8px;
 
   /* Type */
@@ -633,7 +635,7 @@ input[type="checkbox"] {
 .panel-header {
   font-size: var(--t-1);
   font-weight: 600;
-  color: var(--pencil);
+  color: color-mix(in srgb, var(--ink) 84%, var(--film));
   display: flex;
   align-items: center;
   gap: var(--s2);
@@ -786,7 +788,17 @@ input[type="checkbox"] {
 }
 
 .panel-tools {
-  padding: var(--s3);
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.strip-tile {
+  background-color: hsl(var(--h) 7% 17%);
+  background-image: var(--tex), linear-gradient(180deg, hsl(var(--h) 9% 26%), hsl(var(--h) 7% 14%));
+  background-blend-mode: soft-light, normal;
+  background-size: 256px 256px, auto;
 }
 
 .tool-tile {
@@ -1075,10 +1087,10 @@ input[type="checkbox"] {
 
 .control-btn[aria-pressed="true"],
 .filtration-btn.active {
-  background-color: hsl(var(--h) 52% 48%);
-  background-image: var(--tex), linear-gradient(180deg, hsl(var(--h) 55% 62%), hsl(var(--h) 52% 42%));
+  background-color: hsl(var(--h) 52% var(--l));
+  background-image: var(--tex), linear-gradient(180deg, hsl(var(--h) 55% calc(var(--l) + 6%)), hsl(var(--h) 52% calc(var(--l) - 5%)));
   border-color: hsl(var(--h) 45% 68%);
-  color: #0d1114;
+  color: var(--on);
 }
 
 .control-btn:disabled[aria-pressed="true"] {
@@ -1284,7 +1296,7 @@ input[type="checkbox"] {
 .lib-title {
   font-size: var(--t-1);
   font-weight: 600;
-  color: var(--pencil);
+  color: color-mix(in srgb, var(--ink) 84%, var(--film));
 }
 
 .lib-scroll {
@@ -1353,11 +1365,11 @@ input[type="checkbox"] {
   font-size: var(--t-1);
   font-weight: 600;
   cursor: pointer;
-  background-color: hsl(var(--h) 52% 48%);
-  background-image: var(--tex), linear-gradient(180deg, hsl(var(--h) 55% 62%), hsl(var(--h) 52% 42%));
+  background-color: hsl(var(--h) 52% var(--l));
+  background-image: var(--tex), linear-gradient(180deg, hsl(var(--h) 55% calc(var(--l) + 6%)), hsl(var(--h) 52% calc(var(--l) - 5%)));
   background-blend-mode: soft-light, normal;
   background-size: 256px 256px, auto;
-  color: #0d1114;
+  color: var(--on);
   border: 1px solid hsl(var(--h) 45% 68%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
   transition: filter var(--fast) var(--ease);
@@ -1470,8 +1482,39 @@ input[type="checkbox"] {
   }
 }
 
+@media (max-width: 420px) {
+  .strip-tile .temp-goal {
+    display: none;
+  }
+}
+
 @media (max-width: 899px) and (max-height: 760px) {
-  .job-facts {
+  .job-facts,
+  .stage-head .slot-status .state-life {
+    display: none;
+  }
+
+  .panel-state {
+    min-height: 40px;
+    padding-top: var(--s1);
+    padding-bottom: var(--s1);
+  }
+
+  .panel-job {
+    gap: var(--s1);
+  }
+
+  .progress-number {
+    font-size: var(--t-5);
+  }
+
+  .acts .control-btn {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 899px) and (max-height: 680px) {
+  .speed-row {
     display: none;
   }
 }
