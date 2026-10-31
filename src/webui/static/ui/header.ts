@@ -57,7 +57,7 @@ export function updateEditModeToggle(editMode: boolean): void {
     lockIcon.setAttribute('data-lucide', iconName);
   }
   if (text) {
-    text.textContent = editMode ? 'Exit Edit Mode' : 'Enter Edit Mode';
+    text.textContent = editMode ? 'Done editing' : 'Edit layout';
   }
 }
 

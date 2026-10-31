@@ -166,11 +166,11 @@ export function ensureGridInitialized(): void {
 
   gridManager.initialize({
     column: 12,
-    cellHeight: 80,
-    margin: 8,
+    cellHeight: 72,
+    margin: 0,
     staticGrid: true,
     float: false,
-    animate: true,
+    animate: false,
     minRow: 11,
   });
   gridManager.disableEdit();
@@ -556,8 +556,9 @@ interface ThemeColors {
   text: string;
 }
 
-export function applyWebUITheme(theme: ThemeColors): void {
+export function applyWebUITheme(requested: ThemeColors): void {
   const root = document.documentElement;
+  const theme = migrateLegacyColors(requested);
 
   root.style.setProperty('--theme-primary', theme.primary);
   root.style.setProperty('--theme-secondary', theme.secondary);
@@ -593,7 +594,7 @@ export function lightenColor(hex: string, percent: number): string {
 export async function loadCurrentThemeIntoSettings(): Promise<void> {
   try {
     const theme = await apiRequest<ThemeColors>('/api/webui/theme');
-    setThemeInputValues(theme);
+    setThemeInputValues(migrateLegacyColors(theme));
   } catch (error) {
     console.error('Error loading theme into settings:', error);
     setThemeInputValues(DEFAULT_THEME_COLORS);
@@ -625,13 +626,37 @@ export async function handleApplyWebUITheme(): Promise<void> {
   }
 }
 
+/** Palette of the redesign (see DESIGN.md): ink on film, dimension cyan for measured values. */
 const DEFAULT_THEME_COLORS: ThemeColors = {
-  primary: '#4285f4',
-  secondary: '#357abd',
-  background: '#121212',
-  surface: '#1e1e1e',
-  text: '#e0e0e0',
+  primary: '#e9e6dc',
+  secondary: '#5ed0e8',
+  background: '#12171b',
+  surface: '#1b2229',
+  text: '#e9e6dc',
 };
+
+/**
+ * Colours that earlier versions wrote as defaults (the blue palette and the colour pair of
+ * data/config.example.json). A saved value equal to one of these was never chosen by the user,
+ * so it is shown in the redesign palette instead.
+ */
+const LEGACY_DEFAULTS: Record<keyof ThemeColors, readonly string[]> = {
+  primary: ['#4285f4', '#2260c3'],
+  secondary: ['#357abd'],
+  background: ['#121212'],
+  surface: ['#1e1e1e'],
+  text: ['#e0e0e0'],
+};
+
+function migrateLegacyColors(theme: ThemeColors): ThemeColors {
+  const result = { ...theme };
+  for (const key of Object.keys(LEGACY_DEFAULTS) as Array<keyof ThemeColors>) {
+    if (LEGACY_DEFAULTS[key].includes(theme[key].toLowerCase())) {
+      result[key] = DEFAULT_THEME_COLORS[key];
+    }
+  }
+  return result;
+}
 
 export function applyDefaultTheme(): void {
   applyWebUITheme(DEFAULT_THEME_COLORS);

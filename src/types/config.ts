@@ -101,11 +101,11 @@ export interface MutableAppConfig {
  * Default theme colors - dark theme matching WebUI
  */
 export const DEFAULT_THEME: ThemeColors = {
-  primary: '#4285f4', // accent blue
-  secondary: '#357abd', // gradient end
-  background: '#121212', // dark base
-  surface: '#1e1e1e', // card background
-  text: '#e0e0e0', // light text
+  primary: '#e9e6dc', // ink: primary buttons
+  secondary: '#5ed0e8', // dimension cyan: measured values and focus
+  background: '#12171b', // film: page ground
+  surface: '#1b2229', // sheet: panels
+  text: '#e9e6dc', // ink: text
 };
 
 /**

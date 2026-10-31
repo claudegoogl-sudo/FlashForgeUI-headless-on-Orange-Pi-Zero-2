@@ -148,6 +148,9 @@ export class WebUIGridManager {
       this.hiddenComponents.add(componentId);
       return;
     }
+    if (!element.classList.contains(HIDDEN_CLASS)) {
+      this.parkWidget(element);
+    }
     element.classList.add(HIDDEN_CLASS);
     this.hiddenComponents.add(componentId);
   }
@@ -156,8 +159,33 @@ export class WebUIGridManager {
     const element = this.getWidgetElement(componentId);
     if (element) {
       element.classList.remove(HIDDEN_CLASS);
+      this.restoreWidget(element);
     }
     this.hiddenComponents.delete(componentId);
+  }
+
+  /**
+   * A hidden widget is shrunk to one cell and parked below the others: GridStack still
+   * lays hidden items out, and at full size they would leave a hole in the grid.
+   * The real geometry is kept in the element's dataset.
+   */
+  private parkWidget(element: HTMLElement): void {
+    const node = (element as GridItemHTMLElement).gridstackNode;
+    if (!this.grid || !node) return;
+    element.dataset.parkedLayout = JSON.stringify({ x: node.x, y: node.y, w: node.w, h: node.h });
+    this.grid.update(element, { x: 0, y: 10_000, w: 1, h: 1 });
+  }
+
+  private restoreWidget(element: HTMLElement): void {
+    const parked = element.dataset.parkedLayout;
+    if (!this.grid || !parked) return;
+    delete element.dataset.parkedLayout;
+    try {
+      const layout = JSON.parse(parked) as { x: number; y: number; w: number; h: number };
+      this.grid.update(element, layout);
+    } catch {
+      // Keep the parked size; the layout can be reset in Settings.
+    }
   }
 
   public enableEdit(): void {
@@ -244,6 +272,19 @@ export class WebUIGridManager {
       }
     });
 
+    // Hidden widgets are parked at one cell; persist their real geometry instead.
+    root.querySelectorAll<HTMLElement>('[data-parked-layout]').forEach((el) => {
+      const componentId = el.dataset.componentId;
+      const parked = el.dataset.parkedLayout;
+      if (!componentId || !parked || !components[componentId]) return;
+      try {
+        const layout = JSON.parse(parked) as { x: number; y: number; w: number; h: number };
+        Object.assign(components[componentId], layout);
+      } catch {
+        // Keep the parked geometry.
+      }
+    });
+
     return {
       components,
       hiddenComponents: Array.from(this.hiddenComponents),
@@ -254,12 +295,15 @@ export class WebUIGridManager {
     const components = layout.components ?? {};
     this.clear();
 
-    Object.entries(components).forEach(([componentId, config]) => {
-      if (!config) {
-        return;
-      }
-      this.addComponent(componentId, config);
-    });
+    // Insert top-to-bottom, left-to-right so a later widget never pushes an earlier one.
+    Object.entries(components)
+      .sort(([, a], [, b]) => (a?.y ?? 0) - (b?.y ?? 0) || (a?.x ?? 0) - (b?.x ?? 0))
+      .forEach(([componentId, config]) => {
+        if (!config) {
+          return;
+        }
+        this.addComponent(componentId, config);
+      });
 
     const hidden = layout.hiddenComponents ?? [];
     hidden.forEach((componentId) => {

@@ -69,7 +69,7 @@ function createVideoRtcElement(wsUrl: string, mode: string): VideoRTCElement {
 
   element.style.width = '100%';
   element.style.height = '100%';
-  element.style.objectFit = 'cover';
+  element.style.objectFit = 'contain';
   element.style.display = 'block';
 
   return element;

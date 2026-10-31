@@ -17,7 +17,7 @@ import type {
 } from '../app.js';
 import { getCurrentSettings, state } from '../core/AppState.js';
 import { apiRequest, sendCommand } from '../core/Transport.js';
-import { $, hideElement, showToast } from '../shared/dom.js';
+import { $, confirmAction, hideElement, showToast } from '../shared/dom.js';
 import { isAD5XJobFile, isMultiColorJobFile } from '../shared/formatting.js';
 import { loadFileList, showTemperatureDialog, type TemperatureTarget } from '../ui/dialogs.js';
 import { openFileLibrary } from './file-library.js';
@@ -287,7 +287,17 @@ export function setupJobControlEventHandlers(): void {
           await sendPrinterCommand('control/resume');
           break;
         case 'btn-cancel':
-          await sendPrinterCommand('control/cancel');
+          if (
+            await confirmAction({
+              title: 'Cancel this print?',
+              message: `${$('current-job')?.textContent || 'The current job'} stops now and cannot be resumed.`,
+              confirmLabel: 'Cancel print',
+              cancelLabel: 'Keep printing',
+              danger: true,
+            })
+          ) {
+            await sendPrinterCommand('control/cancel');
+          }
           break;
         case 'btn-bed-set':
           showTemperatureDialog({ kind: 'bed' });

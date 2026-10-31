@@ -10,6 +10,7 @@
 
 import type { DeductionSummary, PrinterStatus, SpoolmanStationTracking } from '../app.js';
 import { state } from '../core/AppState.js';
+import { getStationSlot } from '../features/ifs-station.js';
 import { isSpoolmanAvailableForCurrentContext } from '../features/layout-theme.js';
 import { $, hideElement, setTextContent, showElement } from '../shared/dom.js';
 import {
@@ -35,6 +36,8 @@ export function updateConnectionStatus(connected: boolean): void {
   if (text) {
     text.textContent = connected ? 'Connected' : 'Disconnected';
   }
+
+  indicator?.closest('.connection-status')?.setAttribute('data-connected', String(connected));
 }
 
 export function updatePrinterStatus(status: PrinterStatus | null): void {
@@ -135,11 +138,58 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
   updateTvocDisplay(status);
 }
 
-/** `<current>°C / <target>°C`, guarding against NaN readings. */
-function formatTempPair(current: number, target: number): string {
-  const c = Number.isNaN(current) ? 0 : Math.round(current);
-  const t = Number.isNaN(target) ? 0 : Math.round(target);
-  return `${c}°C / ${t}°C`;
+/** Dark or light text colour, whichever reads better on a filament colour field. */
+function readableOn(hex: string): string {
+  const value = Number.parseInt(hex.replace('#', '').slice(0, 6), 16);
+  if (Number.isNaN(value)) {
+    return '#12171b';
+  }
+  const channel = (shift: number) => {
+    const v = ((value >> shift) & 0xff) / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0);
+  // contrast with white is 1.05 / (L + 0.05); with the dark text (L about 0.008) it is (L + 0.05) / 0.058
+  return 1.05 / (luminance + 0.05) > (luminance + 0.05) / 0.058 ? '#ffffff' : '#12171b';
+}
+
+const TOOL_MAX_C = 300;
+const BED_MAX_C = 120;
+const CHAMBER_MAX_C = 80;
+
+/** Rounded reading, 0 for NaN. */
+function roundTemp(value: number): number {
+  return Number.isNaN(value) ? 0 : Math.round(value);
+}
+
+/**
+ * Render one heater reading: the current temperature large, the target beside it,
+ * and a dimension line (filled to the current value, tick at the target).
+ */
+function renderReading(element: HTMLElement | null, current: number, target: number, max: number): void {
+  if (!element) {
+    return;
+  }
+  const c = roundTemp(current);
+  const t = roundTemp(target);
+  element.textContent = '';
+  element.setAttribute('aria-label', t > 0 ? `${c} °C, target ${t} °C` : `${c} °C, heater off`);
+
+  const now = document.createElement('span');
+  now.className = 'temp-now';
+  now.textContent = String(c);
+  const unit = document.createElement('span');
+  unit.className = 'temp-unit';
+  unit.textContent = '°C';
+  const goal = document.createElement('span');
+  goal.className = 'temp-goal';
+  goal.textContent = t > 0 ? `target ${t}°C` : 'off';
+  element.append(now, unit, goal);
+
+  const clamp = (value: number) => Math.min(100, Math.max(0, (value / max) * 100));
+  element.style.setProperty('--now', `${clamp(c)}%`);
+  element.style.setProperty('--goal', `${clamp(t)}%`);
+  element.classList.toggle('has-goal', t > 0);
 }
 
 /** Whether heater Set/Off controls should be disabled for the given printer state. */
@@ -182,43 +232,74 @@ export function updateCreator5TemperatureCard(status: PrinterStatus | null): voi
 
   // Rebuild the per-tool rows only when the tool count changes.
   if (toolGrid) {
-    const existingRows = toolGrid.querySelectorAll('.temp-row').length;
-    if (existingRows !== toolTemps.length) {
+    const existingTiles = toolGrid.querySelectorAll('.tool-tile').length;
+    if (existingTiles !== toolTemps.length) {
       toolGrid.innerHTML = toolTemps
         .map(
           (_, i) => `
-        <div class="temp-row">
-          <span>T${i + 1}: <span class="c5-tool-reading" data-tool-reading="${i}">--°C / --°C</span></span>
+        <div class="tool-tile" data-tool-tile="${i}">
+          <div class="tool-head">
+            <span class="tool-name">T${i + 1}</span>
+            <span class="tool-material" data-tool-material="${i}"></span>
+          </div>
+          <div class="c5-tool-reading temp-reading" data-tool-reading="${i}" role="group"></div>
           <div class="temp-buttons">
-            <button class="temp-btn" data-c5-action="set" data-heater="tool" data-tool="${i}">Set</button>
-            <button class="temp-btn" data-c5-action="off" data-heater="tool" data-tool="${i}">Off</button>
+            <button class="temp-btn" type="button" data-c5-action="set" data-heater="tool" data-tool="${i}" aria-label="Set T${i + 1} temperature">Set</button>
+            <button class="temp-btn" type="button" data-c5-action="off" data-heater="tool" data-tool="${i}" aria-label="Turn T${i + 1} heater off">Off</button>
           </div>
         </div>`
         )
         .join('');
     }
     toolTemps.forEach((tool, i) => {
-      const reading = toolGrid.querySelector(`[data-tool-reading="${i}"]`);
-      if (reading) {
-        reading.textContent = formatTempPair(tool.current, tool.target);
+      renderReading(
+        toolGrid.querySelector<HTMLElement>(`[data-tool-reading="${i}"]`),
+        tool.current,
+        tool.target,
+        TOOL_MAX_C
+      );
+
+      // Tool N prints from material station slot N: show that slot's filament.
+      const tile = toolGrid.querySelector<HTMLElement>(`[data-tool-tile="${i}"]`);
+      const slot = getStationSlot(i + 1);
+      const material = toolGrid.querySelector<HTMLElement>(`[data-tool-material="${i}"]`);
+      if (tile) {
+        if (slot) {
+          tile.style.setProperty('--tool-color', slot.color);
+          tile.style.setProperty('--on-tool', readableOn(slot.color));
+        } else {
+          tile.style.removeProperty('--tool-color');
+          tile.style.removeProperty('--on-tool');
+        }
+        tile.classList.toggle('has-filament', Boolean(slot));
+      }
+      if (material) {
+        material.textContent = slot?.material ?? '';
       }
     });
   }
 
-  setTextContent('c5-bed-temp', formatTempPair(status.bedTemperature, status.bedTargetTemperature));
+  renderReading($('c5-bed-temp'), status.bedTemperature, status.bedTargetTemperature, BED_MAX_C);
 
-  const hasChamber = Boolean(status.hasChamberControl) && status.chamberTemperature !== undefined;
+  // The Creator 5 reports about -100 °C when it has no chamber sensor; show the row only
+  // for a plausible reading.
+  const chamber = status.chamberTemperature;
+  const hasChamber =
+    Boolean(status.hasChamberControl) && chamber !== undefined && !Number.isNaN(chamber) && chamber >= 0;
   chamberRow?.classList.toggle('hidden', !hasChamber);
   if (hasChamber) {
-    setTextContent(
-      'c5-chamber-temp',
-      formatTempPair(status.chamberTemperature ?? 0, status.chamberTargetTemperature ?? 0)
+    renderReading(
+      $('c5-chamber-temp'),
+      chamber,
+      status.chamberTargetTemperature ?? 0,
+      CHAMBER_MAX_C
     );
   }
 
   const disabled = isHeaterControlDisabled(status.printerState || 'Unknown');
   panel.querySelectorAll<HTMLButtonElement>('button[data-c5-action]').forEach((btn) => {
     btn.disabled = disabled;
+    btn.title = disabled ? 'Heaters are locked while a job is running' : '';
   });
 }
 
@@ -487,6 +568,28 @@ function describeDeduction(deduction: DeductionSummary | null): string {
   );
 }
 
+/** One line that says why some controls are unavailable right now. */
+function describeControlsState(printerState: string, ready: boolean, busy: boolean): string {
+  if (printerState === 'Printing' || printerState === 'Heating' || printerState === 'Calibrating') {
+    return 'A job is running. Uploading, files and heater changes wait until it ends.';
+  }
+  if (printerState === 'Paused' || printerState === 'Pausing') {
+    return 'The job is paused. Resume it or cancel it.';
+  }
+  if (printerState === 'Error') {
+    return 'The printer reports an error. Fix it on the printer, then clear the status under More.';
+  }
+  if (busy) {
+    return 'The printer is busy.';
+  }
+  if (ready) {
+    return printerState === 'Ready'
+      ? 'The printer is idle. Start a job from Library or Upload job.'
+      : 'The last job is finished. Clear the plate on the printer before the next job.';
+  }
+  return '';
+}
+
 function updateButtonStates(printerState: string): void {
   const isPrintingActive =
     printerState === 'Printing' ||
@@ -510,9 +613,20 @@ function updateButtonStates(printerState: string): void {
   const resumeBtn = $('btn-resume') as HTMLButtonElement | null;
   const cancelBtn = $('btn-cancel') as HTMLButtonElement | null;
 
-  if (pauseBtn) pauseBtn.disabled = printerState !== 'Printing';
-  if (resumeBtn) resumeBtn.disabled = printerState !== 'Paused';
-  if (cancelBtn) cancelBtn.disabled = !canControlJob;
+  // One job button at a time: Resume replaces Pause while the print is paused.
+  if (pauseBtn) {
+    pauseBtn.hidden = printerState === 'Paused';
+    pauseBtn.disabled = printerState !== 'Printing';
+    pauseBtn.title = pauseBtn.disabled ? 'Available while a job is printing' : '';
+  }
+  if (resumeBtn) {
+    resumeBtn.hidden = printerState !== 'Paused';
+    resumeBtn.disabled = printerState !== 'Paused';
+  }
+  if (cancelBtn) {
+    cancelBtn.disabled = !canControlJob;
+    cancelBtn.title = cancelBtn.disabled ? 'No job to cancel' : '';
+  }
 
   const recentBtn = $('btn-start-recent') as HTMLButtonElement | null;
   const localBtn = $('btn-start-local') as HTMLButtonElement | null;
@@ -545,7 +659,25 @@ function updateButtonStates(printerState: string): void {
   const gcodeUnavailable = state.printerFeatures?.gcodeCommands?.available === false;
   if (homeAxesBtn) homeAxesBtn.disabled = isPrintingActive || gcodeUnavailable;
   const clearStatusBtn = $('btn-clear-status') as HTMLButtonElement | null;
-  if (clearStatusBtn) clearStatusBtn.disabled = isPrintingActive;
+  if (clearStatusBtn) {
+    clearStatusBtn.disabled = isPrintingActive;
+    clearStatusBtn.title = isPrintingActive ? 'Not available during a job' : '';
+  }
+  if (homeAxesBtn) {
+    homeAxesBtn.title = isPrintingActive
+      ? 'Not available during a job'
+      : gcodeUnavailable
+        ? 'This printer does not accept G-code commands'
+        : '';
+  }
+  if (uploadJobBtn) {
+    uploadJobBtn.title = uploadJobBtn.disabled ? 'Available when the printer is ready for a new job' : '';
+  }
+
+  const hint = $('controls-hint');
+  if (hint) {
+    hint.textContent = describeControlsState(printerState, isReadyForNewJob, isBusy);
+  }
 
   const bedSetBtn = $('btn-bed-set') as HTMLButtonElement | null;
   const bedOffBtn = $('btn-bed-off') as HTMLButtonElement | null;
@@ -565,6 +697,10 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
   } else {
     setTextContent('printer-status', 'Unknown');
   }
+  $('printer-state-panel')?.setAttribute(
+    'data-state',
+    (status?.printerState || 'unknown').toLowerCase()
+  );
 
   if (status?.cumulativePrintTime !== undefined) {
     const formattedTime = formatLifetimePrintTime(status.cumulativePrintTime);
@@ -580,3 +716,8 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
     setTextContent('lifetime-filament', '--');
   }
 }
+
+// Tool tiles take their colour from the material station; redraw them when it reports.
+document.addEventListener('station-updated', () => {
+  updateCreator5TemperatureCard(state.printerStatus ?? null);
+});

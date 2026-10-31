@@ -60,6 +60,13 @@ function render(data: LightTimerResponse): void {
   body?.classList.toggle('hidden', !data.supported);
   if (!data.supported) return;
 
+  for (const [id, on] of [['btn-led-on', true], ['btn-led-off', false]] as const) {
+    const button = $(id);
+    if (button && data.lightOn !== undefined) {
+      button.setAttribute('aria-pressed', String(data.lightOn === on));
+    }
+  }
+
   const lightState = $('light-timer-state');
   if (lightState) {
     lightState.textContent = data.lightOn === undefined ? '--' : data.lightOn ? 'on' : 'off';

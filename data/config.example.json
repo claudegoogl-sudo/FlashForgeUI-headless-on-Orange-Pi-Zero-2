@@ -12,10 +12,10 @@
   "SpoolmanUpdateMode": "weight",
   "DebugMode": false,
   "WebUITheme": {
-    "primary": "#2260c3",
-    "secondary": "#357abd",
-    "background": "#121212",
-    "surface": "#1e1e1e",
-    "text": "#e0e0e0"
+    "primary": "#e9e6dc",
+    "secondary": "#5ed0e8",
+    "background": "#12171b",
+    "surface": "#1b2229",
+    "text": "#e9e6dc"
   }
 }

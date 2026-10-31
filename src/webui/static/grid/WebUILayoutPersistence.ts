@@ -63,6 +63,13 @@ export class WebUILayoutPersistence {
         return this.cloneLayout(DEFAULT_LAYOUT);
       }
 
+      // A layout saved for an older default grid no longer tiles (the grid geometry
+      // changed), so it is dropped and the current default is used.
+      if (parsed.layout.version !== DEFAULT_LAYOUT.version) {
+        window.localStorage.removeItem(key);
+        return this.cloneLayout(DEFAULT_LAYOUT);
+      }
+
       return this.cloneLayout(parsed.layout);
     } catch (error) {
       console.warn('[WebUILayoutPersistence] Failed to parse layout:', error);
@@ -122,7 +129,7 @@ export class WebUILayoutPersistence {
   private performSave(key: string, layout: WebUIGridLayout): void {
     const payload: WebUIStoredLayout = {
       updatedAt: Date.now(),
-      layout,
+      layout: { ...layout, version: DEFAULT_LAYOUT.version },
     };
     window.localStorage.setItem(key, JSON.stringify(payload));
   }

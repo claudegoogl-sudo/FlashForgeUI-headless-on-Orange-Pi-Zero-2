@@ -11,7 +11,7 @@
 import type { JobUploadStageResponse } from '../app.js';
 import { state } from '../core/AppState.js';
 import { apiRequest, apiRequestWithMetadata, buildAuthHeaders } from '../core/Transport.js';
-import { $, hideElement, showElement, showToast } from '../shared/dom.js';
+import { $, confirmAction, hideElement, showElement, showToast } from '../shared/dom.js';
 import { loadFileList } from '../ui/dialogs.js';
 import { previewGcodeFile } from './gcode-viewer.js';
 import { openJobUploadWithStaged } from './job-upload.js';
@@ -153,6 +153,13 @@ function updateSyncMarker(list: HTMLElement, file: LibraryFile): void {
   }
 }
 
+/** True while the printer is running (or holding) a job with this file name. */
+function isRunningJob(fileName: string): boolean {
+  const status = state.printerStatus;
+  if (!status || status.jobName !== fileName) return false;
+  return ['printing', 'paused', 'pausing', 'heating'].includes(status.printerState.toLowerCase());
+}
+
 function makeButton(
   label: string,
   action: string,
@@ -209,6 +216,13 @@ function renderLibrary(list: HTMLElement, files: LibraryFile[]): void {
     const sync = document.createElement('span');
     sync.className = 'lib-sync';
     fillSyncMarker(sync, file);
+    if (isRunningJob(file.name)) {
+      item.classList.add('lib-item-printing');
+      const printing = document.createElement('span');
+      printing.className = 'lib-badge lib-badge-printing';
+      printing.textContent = 'Printing now';
+      meta.appendChild(printing);
+    }
     const info = document.createElement('span');
     info.textContent = `${formatFileSize(file.size)} · ${formatModified(file.modified)}`;
     meta.append(sync, info);
@@ -437,7 +451,14 @@ async function renameFile(name: string): Promise<void> {
 }
 
 async function deleteFile(name: string): Promise<void> {
-  if (!window.confirm(`Delete ${name} from the library? This cannot be undone.`)) return;
+  const confirmed = await confirmAction({
+    title: 'Delete this file?',
+    message: `${name} is removed from the library on the WebUI host. This cannot be undone.`,
+    confirmLabel: 'Delete file',
+    cancelLabel: 'Keep file',
+    danger: true,
+  });
+  if (!confirmed) return;
   const { data } = await postJson(libraryUrl(name), undefined, 'DELETE');
   if (data.success) {
     showToast(`Deleted ${name}`, 'success');

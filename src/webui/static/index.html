@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1e1e1e">
+  <meta name="theme-color" content="#12171b">
   <title>FlashForge Web UI</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="gridstack.min.css">
@@ -18,25 +18,25 @@
       <div class="login-container">
         <h1>FlashForge Web UI</h1>
         <div class="login-form">
-          <input type="password" id="password-input" placeholder="Enter password" autocomplete="current-password">
+          <input type="password" id="password-input" placeholder="Password" aria-label="Password" autocomplete="current-password">
           <div class="remember-me">
             <label>
               <input type="checkbox" id="remember-me-checkbox" checked>
               <span>Remember me</span>
             </label>
           </div>
-          <button id="login-button" type="button">Login</button>
+          <button id="login-button" type="button">Log in</button>
         </div>
-        <div id="login-error" class="login-error"></div>
+        <div id="login-error" class="login-error" role="alert"></div>
       </div>
     </div>
 
     <!-- Main UI (initially hidden) -->
     <div id="main-ui" class="main-ui hidden">
       <!-- Header Bar -->
-      <div class="header">
+      <header class="header">
         <div class="header-left">
-          <div class="header-title">FlashForge Web UI</div>
+          <h1 class="header-title">FlashForge Web UI</h1>
         </div>
         <div class="header-center">
           <!-- Printer Selector (hidden when only one printer) -->
@@ -54,7 +54,7 @@
             type="button"
             aria-haspopup="dialog"
             aria-controls="file-manager-modal"
-            title="File Manager"
+            title="File manager" aria-label="File manager"
           >
             <i data-lucide="folder" aria-hidden="true"></i>
           </button>
@@ -64,7 +64,7 @@
             type="button"
             aria-haspopup="dialog"
             aria-controls="calibration-modal"
-            title="Calibration Assistant"
+            title="Calibration assistant" aria-label="Calibration assistant"
           >
             <i data-lucide="gauge" aria-hidden="true"></i>
           </button>
@@ -72,13 +72,13 @@
             id="reboot-button"
             class="settings-button hidden"
             type="button"
-            title="Reboot Printer"
+            title="Reboot printer" aria-label="Reboot printer"
           >
             <i data-lucide="power" aria-hidden="true"></i>
           </button>
           <button id="edit-mode-toggle" class="edit-mode-toggle" aria-pressed="false" type="button">
             <i id="edit-mode-lock-icon" class="lock-icon" data-lucide="lock" aria-hidden="true"></i>
-            <span class="edit-text">Locked</span>
+            <span class="edit-text">Edit layout</span>
           </button>
           <button
             id="settings-button"
@@ -86,20 +86,20 @@
             type="button"
             aria-haspopup="dialog"
             aria-controls="settings-modal"
-            title="WebUI Settings"
+            title="Settings" aria-label="Settings"
           >
             <i data-lucide="settings" aria-hidden="true"></i>
           </button>
-          <div class="connection-status">
-            <span class="connection-indicator" id="connection-indicator"></span>
+          <div class="connection-status" role="status" data-connected="false">
+            <span class="connection-indicator" id="connection-indicator" aria-hidden="true"></span>
             <span id="connection-text">Disconnected</span>
           </div>
-          <button id="logout-button" class="logout-button" type="button">Logout</button>
+          <button id="logout-button" class="logout-button" type="button">Log out</button>
         </div>
-      </div>
+      </header>
 
       <!-- Main Layout -->
-      <div class="main-layout">
+      <main class="main-layout" id="main-content">
         <!-- Desktop GridStack Layout -->
         <div class="grid-stack webui-grid webui-grid-desktop" id="webui-grid-desktop" aria-live="polite">
           <!-- Components injected dynamically via WebUIGridManager -->
@@ -109,72 +109,88 @@
         <div class="webui-grid webui-grid-mobile" id="webui-grid-mobile" aria-live="polite">
           <!-- Components injected in predefined mobile order -->
         </div>
+      </main>
+
+      <!-- Confirmation dialog (shared; see confirmAction in shared/dom.ts) -->
+      <div id="confirm-modal" class="modal confirm-modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+        <div class="modal-content small">
+          <div class="modal-header">
+            <h2 id="confirm-title">Are you sure?</h2>
+          </div>
+          <div class="modal-body">
+            <p id="confirm-message"></p>
+          </div>
+          <div class="modal-footer">
+            <button id="confirm-cancel" class="secondary-btn" type="button">Cancel</button>
+            <button id="confirm-ok" class="primary-btn" type="button">Confirm</button>
+          </div>
+        </div>
       </div>
 
       <!-- Settings Modal -->
       <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
         <div class="modal-content large">
           <div class="modal-header">
-            <h2 id="settings-modal-title">WebUI Settings</h2>
+            <h2 id="settings-modal-title">Settings</h2>
             <button id="close-settings" class="close-btn" aria-label="Close settings" type="button">&times;</button>
           </div>
           <div class="modal-body">
             <section class="settings-section">
-              <h3>Panel Visibility</h3>
-              <label><input type="checkbox" id="toggle-camera" data-component-id="camera" checked> Camera View</label>
+              <h3>Panels</h3>
+              <label><input type="checkbox" id="toggle-camera" data-component-id="camera" checked> Camera</label>
               <label><input type="checkbox" id="toggle-controls" data-component-id="controls" checked> Controls</label>
-              <label><input type="checkbox" id="toggle-model-preview" data-component-id="model-preview" checked> Model Preview</label>
-              <label><input type="checkbox" id="toggle-printer-state" data-component-id="printer-state" checked> Printer State</label>
-              <label><input type="checkbox" id="toggle-temp-control" data-component-id="temp-control" checked> Temperature Control</label>
-              <label><input type="checkbox" id="toggle-creator5-temperature" data-component-id="creator5-temperature" checked> Temperature (Multi-tool)</label>
-              <label><input type="checkbox" id="toggle-filtration-tvoc" data-component-id="filtration-tvoc" checked> Filtration &amp; TVOC</label>
-              <label><input type="checkbox" id="toggle-spoolman-tracker" data-component-id="spoolman-tracker" checked> Spoolman Tracker</label>
-              <label><input type="checkbox" id="toggle-ifs-station" data-component-id="ifs-station" checked> Material Station</label>
-              <label><input type="checkbox" id="toggle-job-progress" data-component-id="job-progress" checked> Job Progress</label>
-              <label><input type="checkbox" id="toggle-job-details" data-component-id="job-details" checked> Job Details</label>
-              <label><input type="checkbox" id="toggle-gcode-viewer" data-component-id="gcode-viewer" checked> G-code View</label>
-              <label><input type="checkbox" id="toggle-light-timer" data-component-id="light-timer" checked> Light Timer</label>
+              <label><input type="checkbox" id="toggle-model-preview" data-component-id="model-preview" checked> Model preview</label>
+              <label><input type="checkbox" id="toggle-printer-state" data-component-id="printer-state" checked> Printer state</label>
+              <label><input type="checkbox" id="toggle-temp-control" data-component-id="temp-control" checked> Temperature (single nozzle)</label>
+              <label><input type="checkbox" id="toggle-creator5-temperature" data-component-id="creator5-temperature" checked> Temperature (multi-tool)</label>
+              <label><input type="checkbox" id="toggle-filtration-tvoc" data-component-id="filtration-tvoc" checked> Filtration and TVOC</label>
+              <label><input type="checkbox" id="toggle-spoolman-tracker" data-component-id="spoolman-tracker" checked> Spoolman</label>
+              <label><input type="checkbox" id="toggle-ifs-station" data-component-id="ifs-station" checked> Material station</label>
+              <label><input type="checkbox" id="toggle-job-progress" data-component-id="job-progress" checked> Job</label>
+              <label><input type="checkbox" id="toggle-job-details" data-component-id="job-details" checked> Job details</label>
+              <label><input type="checkbox" id="toggle-gcode-viewer" data-component-id="gcode-viewer" checked> G-code view</label>
+              <label><input type="checkbox" id="toggle-light-timer" data-component-id="light-timer" checked> Light timer</label>
             </section>
             <section class="settings-section">
-              <h3>Layout Customization</h3>
+              <h3>Layout</h3>
               <label class="toggle-edit-mode">
                 <input type="checkbox" id="toggle-edit-mode">
-                <span>Enable Edit Mode</span>
-                <span class="help-text">Allows dragging and resizing panels</span>
+                <span>Edit layout</span>
+                <span class="help-text">Drag and resize panels. Mobile uses a fixed order.</span>
               </label>
             </section>
             <section class="settings-section">
-              <h3>Theme Colors</h3>
-              <p class="help-text">Customize the WebUI color scheme. Changes apply when you click Apply.</p>
+              <h3>Colors</h3>
+              <p class="help-text">Change the color scheme. Colors apply when you select Apply colors.</p>
               <div class="theme-color-grid">
                 <label>
-                  <span>Primary Color:</span>
+                  <span>Buttons</span>
                   <input type="color" id="webui-theme-primary" class="color-input">
                 </label>
                 <label>
-                  <span>Secondary Color:</span>
+                  <span>Measured values and focus</span>
                   <input type="color" id="webui-theme-secondary" class="color-input">
                 </label>
                 <label>
-                  <span>Background Color:</span>
+                  <span>Page</span>
                   <input type="color" id="webui-theme-background" class="color-input">
                 </label>
                 <label>
-                  <span>Surface Color:</span>
+                  <span>Panels</span>
                   <input type="color" id="webui-theme-surface" class="color-input">
                 </label>
                 <label>
-                  <span>Text Color:</span>
+                  <span>Text</span>
                   <input type="color" id="webui-theme-text" class="color-input">
                 </label>
               </div>
               <div class="theme-buttons">
-                <button id="apply-webui-theme-btn" class="primary-btn" type="button">Apply Theme</button>
-                <button id="reset-webui-theme-btn" class="secondary-btn" type="button">Reset to Default</button>
+                <button id="apply-webui-theme-btn" class="primary-btn" type="button">Apply colors</button>
+                <button id="reset-webui-theme-btn" class="secondary-btn" type="button">Reset colors</button>
               </div>
             </section>
             <section class="settings-section" id="ssh-settings-section">
-              <h3>SSH (Current Printer)</h3>
+              <h3>SSH for this printer</h3>
               <p class="help-text" id="ssh-settings-printer">
                 Credentials used by the file manager, calibration assistant, and reboot.
                 Defaults match the FlashForge-EasySSH provisioning tool.
@@ -219,7 +235,7 @@
       <div id="file-modal" class="modal hidden">
         <div class="modal-content">
           <div class="modal-header">
-            <h2 id="modal-title">Select File</h2>
+            <h2 id="modal-title">Select file</h2>
             <button id="close-modal" class="close-btn" type="button">&times;</button>
           </div>
           <div class="modal-body">
@@ -228,11 +244,11 @@
           <div class="modal-footer">
             <label class="checkbox-label">
               <input type="checkbox" id="auto-level">
-              <span>Auto Level</span>
+              <span>Auto level</span>
             </label>
             <label class="checkbox-label">
               <input type="checkbox" id="start-now" checked>
-              <span>Start Now</span>
+              <span>Start now</span>
             </label>
             <button id="print-file-btn" class="primary-btn" type="button" disabled>Print</button>
           </div>
@@ -243,7 +259,7 @@
       <div id="job-upload-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="job-upload-title">
         <div class="modal-content large job-upload">
           <div class="modal-header">
-            <h2 id="job-upload-title">Upload Job</h2>
+            <h2 id="job-upload-title">Upload job</h2>
             <button id="job-upload-close" class="close-btn" type="button" aria-label="Close job uploader">&times;</button>
           </div>
           <div class="modal-body">
@@ -256,11 +272,11 @@
             <div class="job-upload-options">
               <label class="checkbox-label">
                 <input type="checkbox" id="job-upload-start-now" checked>
-                <span>Start Now</span>
+                <span>Start now</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" id="job-upload-auto-level">
-                <span>Auto Level</span>
+                <span>Auto level</span>
               </label>
             </div>
 
@@ -339,7 +355,7 @@
           </div>
           <div class="modal-footer">
             <button id="job-upload-cancel" class="secondary-btn" type="button">Cancel</button>
-            <button id="job-upload-ok" class="primary-btn" type="button" disabled>Start Print</button>
+            <button id="job-upload-ok" class="primary-btn" type="button" disabled>Start print</button>
           </div>
 
           <div id="job-upload-loading" class="job-upload-overlay hidden">

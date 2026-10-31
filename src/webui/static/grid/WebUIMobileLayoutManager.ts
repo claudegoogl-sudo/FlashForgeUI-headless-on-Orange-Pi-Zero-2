@@ -7,19 +7,20 @@ import { createComponentElement } from './WebUIComponentRegistry.js';
 
 export class WebUIMobileLayoutManager {
   private container: HTMLElement | null = null;
+  // State and progress first, then the camera, the heaters and the controls.
   private readonly componentOrder = [
-    'camera',
-    'job-progress',
-    'gcode-viewer',
-    'light-timer',
-    'controls',
     'printer-state',
-    'temp-control',
+    'job-progress',
+    'camera',
     'creator5-temperature',
-    'spoolman-tracker',
-    'ifs-station',
-    'model-preview',
+    'temp-control',
+    'controls',
     'job-details',
+    'gcode-viewer',
+    'ifs-station',
+    'light-timer',
+    'spoolman-tracker',
+    'model-preview',
     'filtration-tvoc',
   ];
 

@@ -49,7 +49,10 @@ function applyStatus(status: PrinterStatus): void {
   const active = printerState === 'printing' || printerState === 'paused';
   const slider = $('speed-slider') as HTMLInputElement | null;
   const reset = $('speed-reset') as HTMLButtonElement | null;
-  if (slider) slider.disabled = !active;
+  if (slider) {
+    slider.disabled = !active;
+    slider.title = active ? '' : 'Available while a job is printing or paused';
+  }
   if (reset) reset.disabled = !active;
 
   if (!active) {

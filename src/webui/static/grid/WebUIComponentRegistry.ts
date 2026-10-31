@@ -16,7 +16,7 @@ import type {
   WebUIGridLayout,
 } from './types.js';
 
-const DEFAULT_LAYOUT_VERSION = 2;
+const DEFAULT_LAYOUT_VERSION = 3;
 
 const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
   camera: {
@@ -117,7 +117,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'camera',
     html: `
       <div class="panel panel-camera" id="camera-panel">
-        <div class="panel-header">Camera</div>
+        <h2 class="panel-header">Camera</h2>
         <div class="panel-content camera-panel-content" id="camera-container">
           <div id="camera-placeholder" class="no-camera">Camera Unavailable</div>
           <div id="camera-fps-overlay" class="camera-fps-overlay hidden">-- FPS</div>
@@ -128,32 +128,37 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
   controls: {
     id: 'controls',
     html: `
-      <div class="panel" id="control-grid">
-        <div class="panel-header">Controls</div>
+      <div class="panel panel-controls" id="control-grid">
+        <h2 class="panel-header">Controls</h2>
         <div class="panel-content">
-          <div class="btn-row">
-            <button id="btn-led-on" class="control-btn">LED On</button>
-            <button id="btn-clear-status" class="control-btn">Clear Status</button>
+          <div class="ctl-job">
+            <button id="btn-pause" class="control-btn primary" type="button">Pause</button>
+            <button id="btn-resume" class="control-btn primary" type="button" hidden>Resume</button>
           </div>
-          <div class="btn-row">
-            <button id="btn-led-off" class="control-btn">LED Off</button>
-            <button id="btn-home-axes" class="control-btn">Home Axes</button>
+          <div class="ctl-group" role="group" aria-label="Light">
+            <span class="ctl-label" aria-hidden="true">Light</span>
+            <div class="ctl-segment">
+              <button id="btn-led-on" class="control-btn" type="button" aria-pressed="false">On</button>
+              <button id="btn-led-off" class="control-btn" type="button" aria-pressed="false">Off</button>
+            </div>
           </div>
-          <div class="btn-row">
-            <button id="btn-pause" class="control-btn">Pause</button>
-            <button id="btn-resume" class="control-btn">Resume</button>
+          <div class="ctl-group" role="group" aria-label="Jobs">
+            <button id="btn-file-library" class="control-btn" type="button">Library</button>
+            <button id="btn-upload-job" class="control-btn" type="button">Upload job</button>
           </div>
-          <div class="btn-row">
-            <button id="btn-cancel" class="control-btn">Cancel Print</button>
-            <button id="btn-start-recent" class="control-btn">Recent Files</button>
-          </div>
-          <div class="btn-row">
-            <button id="btn-start-local" class="control-btn">Local Files</button>
-            <button id="btn-refresh" class="control-btn">Refresh Status</button>
-          </div>
-          <div class="btn-row">
-            <button id="btn-upload-job" class="control-btn">Upload Job</button>
-            <button id="btn-file-library" class="control-btn">Library</button>
+          <details class="ctl-more">
+            <summary>More</summary>
+            <div class="ctl-more-body">
+              <button id="btn-start-recent" class="control-btn" type="button">Recent files</button>
+              <button id="btn-start-local" class="control-btn" type="button">Local files</button>
+              <button id="btn-home-axes" class="control-btn" type="button">Home axes</button>
+              <button id="btn-clear-status" class="control-btn" type="button">Clear status</button>
+              <button id="btn-refresh" class="control-btn" type="button">Refresh status</button>
+            </div>
+          </details>
+          <p id="controls-hint" class="ctl-hint"></p>
+          <div class="ctl-danger">
+            <button id="btn-cancel" class="control-btn danger" type="button">Cancel print</button>
           </div>
         </div>
       </div>
@@ -163,7 +168,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'model-preview',
     html: `
       <div class="panel" id="model-preview-panel">
-        <div class="panel-header">Model Preview</div>
+        <h2 class="panel-header">Model preview</h2>
         <div class="panel-content" id="model-preview">
           <div class="no-preview">No preview available</div>
         </div>
@@ -173,21 +178,14 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
   'printer-state': {
     id: 'printer-state',
     html: `
-      <div class="panel" id="printer-state-panel">
-        <div class="panel-header">Printer State</div>
+      <div class="panel panel-state" id="printer-state-panel" data-state="unknown">
+        <h2 class="panel-header">Printer</h2>
         <div class="panel-content">
-          <div class="state-row">
-            <span>Status:</span>
-            <span id="printer-status">Unknown</span>
-          </div>
-          <div class="state-row">
-            <span>Lifetime Print Time:</span>
-            <span id="lifetime-print-time">--</span>
-          </div>
-          <div class="state-row">
-            <span>Lifetime Filament:</span>
-            <span id="lifetime-filament">--</span>
-          </div>
+          <p class="state-main"><span class="state-dot" aria-hidden="true"></span><span id="printer-status">Unknown</span></p>
+          <dl class="state-life">
+            <div><dt>Lifetime print time</dt><dd id="lifetime-print-time">--</dd></div>
+            <div><dt>Lifetime filament</dt><dd id="lifetime-filament">--</dd></div>
+          </dl>
         </div>
       </div>
     `,
@@ -196,20 +194,22 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'temp-control',
     html: `
       <div class="panel" id="temp-control-panel">
-        <div class="panel-header">Temperature Control</div>
+        <h2 class="panel-header">Temperature</h2>
         <div class="panel-content">
           <div class="temp-row">
-            <span>Bed: <span id="bed-temp">--°C / --°C</span></span>
+            <span class="temp-label">Bed</span>
+            <span class="temp-reading" id="bed-temp">--°C / --°C</span>
             <div class="temp-buttons">
-              <button id="btn-bed-set" class="temp-btn">Set</button>
-              <button id="btn-bed-off" class="temp-btn">Off</button>
+              <button id="btn-bed-set" class="temp-btn" type="button">Set</button>
+              <button id="btn-bed-off" class="temp-btn" type="button">Off</button>
             </div>
           </div>
           <div class="temp-row">
-            <span>Extruder: <span id="extruder-temp">--°C / --°C</span></span>
+            <span class="temp-label">Extruder</span>
+            <span class="temp-reading" id="extruder-temp">--°C / --°C</span>
             <div class="temp-buttons">
-              <button id="btn-extruder-set" class="temp-btn">Set</button>
-              <button id="btn-extruder-off" class="temp-btn">Off</button>
+              <button id="btn-extruder-set" class="temp-btn" type="button">Set</button>
+              <button id="btn-extruder-off" class="temp-btn" type="button">Off</button>
             </div>
           </div>
         </div>
@@ -220,25 +220,27 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'creator5-temperature',
     html: `
       <div class="panel" id="creator5-temp-panel">
-        <div class="panel-header">Temperature</div>
+        <h2 class="panel-header">Temperature</h2>
         <div class="panel-content">
           <div class="c5-temps-unavailable hidden" id="c5-temps-unavailable">
             Per-tool temperature control is not available for this printer.
           </div>
           <div class="c5-temps-body" id="c5-temps-body">
             <div class="c5-tool-grid" id="c5-tool-grid"></div>
-            <div class="temp-row">
-              <span>Bed: <span id="c5-bed-temp">--°C / --°C</span></span>
+            <div class="temp-row" id="c5-bed-row">
+              <span class="temp-label">Bed</span>
+              <span class="temp-reading" id="c5-bed-temp">--°C / --°C</span>
               <div class="temp-buttons">
-                <button class="temp-btn" data-c5-action="set" data-heater="bed">Set</button>
-                <button class="temp-btn" data-c5-action="off" data-heater="bed">Off</button>
+                <button class="temp-btn" type="button" data-c5-action="set" data-heater="bed" aria-label="Set bed temperature">Set</button>
+                <button class="temp-btn" type="button" data-c5-action="off" data-heater="bed" aria-label="Turn bed heater off">Off</button>
               </div>
             </div>
             <div class="temp-row hidden" id="c5-chamber-row">
-              <span>Chamber: <span id="c5-chamber-temp">--°C / --°C</span></span>
+              <span class="temp-label">Chamber</span>
+              <span class="temp-reading" id="c5-chamber-temp">--°C / --°C</span>
               <div class="temp-buttons">
-                <button class="temp-btn" data-c5-action="set" data-heater="chamber">Set</button>
-                <button class="temp-btn" data-c5-action="off" data-heater="chamber">Off</button>
+                <button class="temp-btn" type="button" data-c5-action="set" data-heater="chamber" aria-label="Set chamber temperature">Set</button>
+                <button class="temp-btn" type="button" data-c5-action="off" data-heater="chamber" aria-label="Turn chamber heater off">Off</button>
               </div>
             </div>
           </div>
@@ -250,7 +252,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'filtration-tvoc',
     html: `
       <div class="panel" id="filtration-panel">
-        <div class="panel-header">Filtration &amp; TVOC</div>
+        <h2 class="panel-header">Filtration and TVOC</h2>
         <div class="panel-content">
           <div class="filtration-section" id="filtration-section">
             <div class="status-title">Filtration: <span id="filtration-status">Off</span></div>
@@ -270,23 +272,19 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
   'job-progress': {
     id: 'job-progress',
     html: `
-      <div class="panel" id="job-progress-panel">
-        <div class="panel-header">Job Progress</div>
+      <div class="panel panel-job" id="job-progress-panel">
+        <h2 class="panel-header">Job</h2>
         <div class="panel-content">
-          <div class="job-row">
-            <span>Current Job:</span>
-            <span id="current-job">No active job</span>
+          <p class="job-name"><span class="visually-hidden">Current job: </span><span id="current-job">No active job</span></p>
+          <div class="progress-block">
+            <span id="progress-percentage" class="progress-number">0%</span>
+            <progress id="progress-bar" value="0" max="100" aria-label="Job progress"></progress>
           </div>
-          <div class="progress-row">
-            <span>Progress:</span>
-            <span id="progress-percentage">0%</span>
-          </div>
-          <progress id="progress-bar" value="0" max="100"></progress>
           <div class="speed-row hidden" id="speed-row">
-            <span>Speed:</span>
-            <input id="speed-slider" class="speed-slider" type="range" min="50" max="200" step="5" value="100" aria-label="Print speed" disabled>
+            <label for="speed-slider" class="speed-label">Speed</label>
+            <input id="speed-slider" class="speed-slider" type="range" min="50" max="200" step="5" value="100" disabled>
             <span id="speed-value" class="speed-value">--</span>
-            <button id="speed-reset" class="speed-reset" type="button" title="Back to the speed as sliced" disabled>100 %</button>
+            <button id="speed-reset" class="speed-reset" type="button" title="Back to the speed as sliced (100 %)" disabled>Reset</button>
           </div>
         </div>
       </div>
@@ -295,29 +293,16 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
   'job-details': {
     id: 'job-details',
     html: `
-      <div class="panel" id="job-details-panel">
-        <div class="panel-header">Job Details</div>
+      <div class="panel panel-details" id="job-details-panel">
+        <h2 class="panel-header">Job details</h2>
         <div class="panel-content">
-          <div class="detail-row">
-            <span>Layer:</span>
-            <span id="layer-info">-- / --</span>
-          </div>
-          <div class="detail-row">
-            <span>Job time:</span>
-            <span id="elapsed-time">--:--</span>
-          </div>
-          <div class="detail-row">
-            <span>Eta:</span>
-            <span id="time-remaining">--:--</span>
-          </div>
-          <div class="detail-row">
-            <span>Weight:</span>
-            <span id="job-weight">--</span>
-          </div>
-          <div class="detail-row">
-            <span>Length:</span>
-            <span id="job-length">--</span>
-          </div>
+          <dl class="detail-grid">
+            <div><dt>Layer</dt><dd id="layer-info">-- / --</dd></div>
+            <div><dt>Elapsed</dt><dd id="elapsed-time">--:--</dd></div>
+            <div><dt>Done at</dt><dd id="time-remaining">--:--</dd></div>
+            <div><dt>Weight</dt><dd id="job-weight">--</dd></div>
+            <div><dt>Length</dt><dd id="job-length">--</dd></div>
+          </dl>
         </div>
       </div>
     `,
@@ -326,20 +311,20 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'light-timer',
     html: `
       <div class="panel" id="light-timer-panel">
-        <div class="panel-header">Light Timer</div>
+        <h2 class="panel-header">Light timer</h2>
         <div class="panel-content" id="light-timer-content">
           <div id="light-timer-unsupported" class="light-timer-note hidden">This printer has no controllable light.</div>
           <div id="light-timer-body">
             <div class="light-timer-row">
-              <span>Light: <span id="light-timer-state" class="light-timer-state">--</span></span>
+              <span>Light is <span id="light-timer-state" class="light-timer-state">--</span></span>
               <span id="light-timer-clock" class="light-timer-clock"></span>
             </div>
             <div class="light-timer-row">
               <label class="light-timer-check"><input type="checkbox" id="light-timer-daily-enabled"> Turn off daily at</label>
-              <input type="time" id="light-timer-daily-time" class="light-timer-time" value="22:00">
+              <input type="time" id="light-timer-daily-time" class="light-timer-time" value="22:00" aria-label="Daily turn-off time">
             </div>
             <label class="light-timer-check light-timer-sub"><input type="checkbox" id="light-timer-skip"> Not on days when a print is running</label>
-            <div class="light-timer-quick">
+            <div class="light-timer-quick" role="group" aria-label="Turn off after">
               <span>Turn off in</span>
               <button type="button" class="light-timer-btn" data-off-in="30">30 min</button>
               <button type="button" class="light-timer-btn" data-off-in="60">1 h</button>
@@ -359,7 +344,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'gcode-viewer',
     html: `
       <div class="panel" id="gcode-view-panel">
-        <div class="panel-header">G-code View</div>
+        <h2 class="panel-header">G-code view</h2>
         <div class="panel-content gcode-view-content">
           <div class="gcode-view-stage">
             <canvas id="gcode-view-canvas"></canvas>
@@ -380,7 +365,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'spoolman-tracker',
     html: `
       <div class="panel" id="spoolman-panel">
-        <div class="panel-header">Spoolman Tracker</div>
+        <h2 class="panel-header">Spoolman</h2>
         <div class="panel-content">
           <div id="spoolman-disabled" class="spoolman-state hidden">
             <div class="spoolman-message" id="spoolman-disabled-message">Spoolman integration is disabled</div>
@@ -418,7 +403,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
     id: 'ifs-station',
     html: `
       <div class="panel ifs-card" id="ifs-station-panel">
-        <div class="panel-header">Material Station</div>
+        <h2 class="panel-header">Material station</h2>
         <div class="panel-content">
           <div class="ifs-card-state ifs-card-unavailable hidden">
             <div class="ifs-card-message">Material station not available on this printer</div>
@@ -465,21 +450,26 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
 };
 
 const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
-  // Two 6-column halves that tile without holes for the Creator 5 panel set
-  // (multi-tool temperature + material station) and for single-nozzle printers.
-  camera: { x: 0, y: 0, w: 6, h: 6 },
-  controls: { x: 6, y: 0, w: 6, h: 6 },
-  'printer-state': { x: 0, y: 6, w: 3, h: 2 },
-  'temp-control': { x: 3, y: 6, w: 3, h: 2 },
-  'creator5-temperature': { x: 3, y: 6, w: 3, h: 5 },
-  'ifs-station': { x: 0, y: 8, w: 3, h: 3 },
-  'job-progress': { x: 6, y: 6, w: 6, h: 3 },
-  'job-details': { x: 6, y: 9, w: 3, h: 3 },
-  'model-preview': { x: 9, y: 9, w: 3, h: 3 },
-  'gcode-viewer': { x: 0, y: 12, w: 12, h: 6 },
-  'light-timer': { x: 0, y: 18, w: 3, h: 4 },
-  'filtration-tvoc': { x: 3, y: 18, w: 3, h: 2 },
-  'spoolman-tracker': { x: 6, y: 18, w: 3, h: 2 },
+  // One ruled sheet on a 12-column grid (no gaps; panels share hairlines).
+  // Row 1 is the title block: state, job, job details. Below it the left 8 columns
+  // hold the camera and the G-code view; the right 4 hold the heaters, the controls
+  // and the material station. The light timer and model preview form the bottom row;
+  // optional panels follow. Hidden panels are parked by the grid manager, so the
+  // Creator 5 set (multi-tool temperature) and the single-nozzle set both tile
+  // without holes.
+  'printer-state': { x: 0, y: 0, w: 3, h: 3 },
+  'job-progress': { x: 3, y: 0, w: 5, h: 3 },
+  'job-details': { x: 8, y: 0, w: 4, h: 3 },
+  camera: { x: 0, y: 3, w: 8, h: 8 },
+  'creator5-temperature': { x: 8, y: 3, w: 4, h: 6 },
+  controls: { x: 8, y: 9, w: 4, h: 6 },
+  'ifs-station': { x: 8, y: 15, w: 4, h: 4 },
+  'gcode-viewer': { x: 0, y: 11, w: 8, h: 8 },
+  'light-timer': { x: 0, y: 19, w: 6, h: 4 },
+  'model-preview': { x: 6, y: 19, w: 6, h: 4 },
+  'filtration-tvoc': { x: 0, y: 23, w: 6, h: 2 },
+  'spoolman-tracker': { x: 6, y: 23, w: 6, h: 3 },
+  'temp-control': { x: 8, y: 26, w: 4, h: 3 },
 };
 
 const COMPONENT_IDS = Object.keys(COMPONENT_DEFINITIONS);

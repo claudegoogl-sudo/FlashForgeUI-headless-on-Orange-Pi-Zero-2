@@ -108,6 +108,20 @@ function renderIfsCard(status: MaterialStationStatus | null): void {
   }
 }
 
+/** Filament in material station slot `slot` (1-4), or null when empty or unknown. */
+export function getStationSlot(slot: number): { color: string; material: string } | null {
+  const data = latestStation?.slots.find((s) => s.slotId + 1 === slot);
+  if (!latestStation?.connected || !data || data.isEmpty) {
+    return null;
+  }
+  const color = data.materialColor
+    ? data.materialColor.startsWith('#')
+      ? data.materialColor
+      : `#${data.materialColor}`
+    : '';
+  return color ? { color, material: data.materialType || 'Unknown' } : null;
+}
+
 async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | null> {
   if (state.authRequired && !state.authToken) {
     return null;
@@ -142,6 +156,7 @@ export async function refreshIfsStationCard(): Promise<void> {
   const status = await fetchMaterialStationStatus();
   latestStation = status;
   renderIfsCard(status);
+  document.dispatchEvent(new CustomEvent('station-updated'));
 }
 
 function handleSlotClick(slotNumber: number): void {

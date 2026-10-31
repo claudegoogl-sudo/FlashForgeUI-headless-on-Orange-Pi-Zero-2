@@ -38,6 +38,10 @@ const libFiles = [
     src: 'src/webui/static/lib/video-rtc.js',
     dest: 'lib/video-rtc.js',
   },
+  {
+    src: 'src/webui/static/fonts/archivo-var-latin.woff2',
+    dest: 'fonts/archivo-var-latin.woff2',
+  },
 ];
 
 const GREEN = '\u001B[32m';

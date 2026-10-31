@@ -91,8 +91,8 @@ function setupDiscoveryButton(): void {
   const addButton = document.createElement('button');
   addButton.id = 'add-printer-btn';
   addButton.className = 'add-printer-btn';
-  addButton.title = 'Add Printer';
-  addButton.innerHTML = '<i data-lucide="plus" aria-hidden="true"></i><span>Add Printer</span>';
+  addButton.title = 'Add printer';
+  addButton.innerHTML = '<i data-lucide="plus" aria-hidden="true"></i><span>Add printer</span>';
   addButton.addEventListener('click', () => {
     showElement('discovery-modal');
     loadSavedPrinters();
