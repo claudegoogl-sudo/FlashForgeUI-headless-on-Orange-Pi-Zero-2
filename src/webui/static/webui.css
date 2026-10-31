@@ -4037,6 +4037,33 @@ body {
   display: none;
 }
 
+.lib-badge {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid currentColor;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.lib-badge-synced {
+  color: var(--success-color);
+}
+
+.lib-badge-queued {
+  color: var(--warning-color);
+}
+
+.lib-badge-failed {
+  color: var(--error-color);
+}
+
+.lib-badge-unsynced {
+  color: var(--text-color-secondary);
+}
+
 .lib-actions {
   display: flex;
   flex-wrap: wrap;

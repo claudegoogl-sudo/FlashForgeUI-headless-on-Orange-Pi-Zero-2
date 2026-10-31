@@ -16,10 +16,15 @@ import { loadFileList } from '../ui/dialogs.js';
 import { previewGcodeFile } from './gcode-viewer.js';
 import { openJobUploadWithStaged } from './job-upload.js';
 
+type SyncState = 'queued' | 'synced' | 'failed' | 'unsynced';
+
 interface LibraryFile {
   name: string;
   size: number;
   modified: string;
+  syncState?: SyncState;
+  syncedAt?: string;
+  lastError?: string;
 }
 
 interface LibraryFileMeta {
@@ -40,8 +45,17 @@ interface ApiResult {
 }
 
 const ACCEPTED_EXTENSIONS = ['.gcode', '.gx', '.3mf'];
+const REFRESH_INTERVAL_MS = 10_000;
+const SYNC_LABELS: Record<SyncState, string> = {
+  synced: 'On printer',
+  queued: 'Queued',
+  failed: 'Failed',
+  unsynced: 'Not synced',
+};
 const metaCache = new Map<string, LibraryFileMeta>();
 let uploading = false;
+let refreshTimer: number | null = null;
+let renderedKey = '';
 
 function libraryUrl(name: string, suffix = ''): string {
   return `/api/files/library/${encodeURIComponent(name)}${suffix}`;
@@ -77,26 +91,65 @@ export async function openFileLibrary(): Promise<void> {
   if (!isAuthenticated()) return;
   showElement('file-library-modal');
   await refreshLibrary();
+  if (refreshTimer === null) {
+    refreshTimer = window.setInterval(() => void refreshLibrary(true), REFRESH_INTERVAL_MS);
+  }
 }
 
 function closeFileLibrary(): void {
   hideElement('file-library-modal');
+  if (refreshTimer !== null) {
+    window.clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
 }
 
-async function refreshLibrary(): Promise<void> {
+/** @param quiet periodic refresh: no error toasts, and only the sync markers change when the files did not */
+async function refreshLibrary(quiet = false): Promise<void> {
   const list = $('lib-list');
   if (!list) return;
 
   try {
     const result = await apiRequest<ApiResult & { files?: LibraryFile[] }>('/api/files/library');
     if (!result.success || !result.files) {
-      showToast(result.error || 'Failed to load files', 'error');
+      if (!quiet) showToast(result.error || 'Failed to load files', 'error');
       return;
     }
+    const key = result.files.map((file) => `${file.name}|${file.size}|${file.modified}`).join('\n');
+    if (quiet && key === renderedKey) {
+      for (const file of result.files) updateSyncMarker(list, file);
+      return;
+    }
+    renderedKey = key;
     renderLibrary(list, result.files);
   } catch (error) {
     console.error('Failed to load library:', error);
-    showToast('Failed to load files', 'error');
+    if (!quiet) showToast('Failed to load files', 'error');
+  }
+}
+
+/** Fill the sync marker (badge and, for failed files, a Retry button) of one list item. */
+function fillSyncMarker(marker: HTMLElement, file: LibraryFile): void {
+  marker.textContent = '';
+  if (!file.syncState) return;
+  const badge = document.createElement('span');
+  badge.className = `lib-badge lib-badge-${file.syncState}`;
+  badge.textContent = SYNC_LABELS[file.syncState];
+  if (file.syncState === 'failed' && file.lastError) badge.title = file.lastError;
+  if (file.syncState === 'synced' && file.syncedAt) {
+    badge.title = `Sent ${formatModified(file.syncedAt)}`;
+  }
+  marker.appendChild(badge);
+  if (file.syncState === 'failed') {
+    marker.appendChild(makeButton('Retry', 'requeue', file.name));
+  }
+}
+
+function updateSyncMarker(list: HTMLElement, file: LibraryFile): void {
+  for (const item of Array.from(list.querySelectorAll<HTMLElement>('.lib-item'))) {
+    if (item.dataset.name !== file.name) continue;
+    const marker = item.querySelector<HTMLElement>('.lib-sync');
+    if (marker) fillSyncMarker(marker, file);
   }
 }
 
@@ -153,7 +206,12 @@ function renderLibrary(list: HTMLElement, files: LibraryFile[]): void {
 
     const meta = document.createElement('div');
     meta.className = 'lib-meta';
-    meta.textContent = `${formatFileSize(file.size)} · ${formatModified(file.modified)}`;
+    const sync = document.createElement('span');
+    sync.className = 'lib-sync';
+    fillSyncMarker(sync, file);
+    const info = document.createElement('span');
+    info.textContent = `${formatFileSize(file.size)} · ${formatModified(file.modified)}`;
+    meta.append(sync, info);
     body.appendChild(meta);
 
     const details = document.createElement('div');
@@ -347,6 +405,15 @@ async function postJson(
   return { status: result.status, data: result.data };
 }
 
+async function requeueFile(name: string): Promise<void> {
+  const { data } = await postJson(libraryUrl(name, '/requeue'), undefined);
+  if (data.success) {
+    await refreshLibrary();
+  } else {
+    showToast(data.error || 'Could not queue the file', 'error');
+  }
+}
+
 async function renameFile(name: string): Promise<void> {
   const input = window.prompt('New file name', name);
   if (input === null) return;
@@ -490,6 +557,9 @@ export function setupFileLibraryHandlers(): void {
         break;
       case 'download':
         void downloadFile(name);
+        break;
+      case 'requeue':
+        void requeueFile(name);
         break;
       case 'rename':
         void renameFile(name);
