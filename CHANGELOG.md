@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The job library is now an upload queue for the printer (auto-sync).** A new service on the WebUI host sends library files to the active printer when it is idle and ready, upload only (never started), one file every 10 seconds at most, with no browser open. It keeps a record per file in `<data dir>/library-sync.json`, retries a failed send with a growing delay, and marks the file `failed` after 5 attempts. A send that did not finish (restart, crash) stays queued. Files already in the library at the first run are not queued. They are marked `synced` when the printer lists them and `unsynced` otherwise.
+- **Sync markers in the library list:** On printer, Queued, Failed (the error as a tooltip, with a Retry button), Not synced. The list refreshes itself every 10 seconds while it is open. `GET /api/files/library` returns `syncState`, `syncedAt` and `lastError` per file, and `POST /api/files/library/<name>/requeue` queues a file again. A manual Send marks the file as on the printer.
+- **Optional cleanup of printer storage, off by default** (`AutoSyncCleanupEnabled`, dry run by default). It deletes only files this service synced, keeps the newest N, spares the printing and last printed file, and never touches anything younger than 24 hours. It needs SFTP file management, so it does nothing on the Creator 5 (its HTTP API has no delete call).
+
 ### Fixed
 
 - **The WebUI server can no longer start twice at the same moment.** A settings change that arrived during startup could start a second server while the first was still starting. The second start failed because the port was already taken, and its cleanup closed the first server's connections. Both now share one start. A stop that arrives while the server is still starting now waits for the start to finish, so the server cannot come back up after it was stopped. Thanks to [@jsalmon00](https://github.com/jsalmon00) for finding this in [FlashForgeUI-Electron#80](https://github.com/Parallel-7/FlashForgeUI-Electron/pull/80).
