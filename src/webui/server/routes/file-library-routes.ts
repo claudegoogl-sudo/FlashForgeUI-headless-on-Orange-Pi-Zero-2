@@ -2,7 +2,8 @@
  * @fileoverview WebUI job library routes: host-side job library plus "send to printer".
  *
  * Library files live on the machine running FlashForgeUI (see FileLibraryService).
- * - GET    /files/library                 list files
+ * - GET    /files/library                 list files, each with syncState (queued | synced | failed
+ *                                         | unsynced), syncedAt and lastError from the auto-sync queue
  * - PUT    /files/library/:name           upload (raw request body, ?overwrite=1 to replace)
  * - GET    /files/library/:name/download  download
  * - GET    /files/library/:name/meta      slicer metadata + thumbnail (cached per mtime)
@@ -10,6 +11,7 @@
  * - DELETE /files/library/:name           delete
  * - POST   /files/library/:name/send      upload to the printer ({ startNow?, leveling? });
  *                                         refused while the printer is busy
+ * - POST   /files/library/:name/requeue  queue the file for auto-sync again (failed / not synced)
  * - POST   /files/library/:name/stage     stage for the Upload Job dialog (same response as
  *                                         POST /jobs/upload/stage), so a library file can be
  *                                         started with material matching
@@ -17,6 +19,7 @@
 
 import { parseSlicerFile } from '@parallel-7/slicer-meta';
 import type { Response, Router } from 'express';
+import { type AutoSyncService, getAutoSyncService } from '../../../services/AutoSyncService';
 import {
   FileLibraryError,
   type FileLibraryService,
@@ -100,11 +103,14 @@ function parseBoolean(value: unknown): boolean {
 export function registerFileLibraryRoutes(
   router: Router,
   deps: RouteDependencies,
-  library: FileLibraryService = getFileLibraryService()
+  library: FileLibraryService = getFileLibraryService(),
+  autoSync: AutoSyncService = getAutoSyncService()
 ): void {
   router.get('/files/library', async (_req: AuthenticatedRequest, res: Response) => {
     try {
-      const files = await library.list();
+      const listed = await library.list();
+      const sync = await autoSync.describe(listed);
+      const files = listed.map((file) => ({ ...file, ...sync.get(file.name) }));
       return res.json({ success: true, files });
     } catch (error) {
       return handleError(res, error);
@@ -199,6 +205,15 @@ export function registerFileLibraryRoutes(
     }
   });
 
+  router.post('/files/library/:name/requeue', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await autoSync.requeue(req.params.name as string);
+      return res.json({ success: true });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  });
+
   router.post('/files/library/:name/stage', async (req: AuthenticatedRequest, res: Response) => {
     let uploadId: string | null = null;
     try {
@@ -283,6 +298,7 @@ export function registerFileLibraryRoutes(
       if (!result.success) {
         return sendErrorResponse(res, 502, result.error || 'Printer rejected the upload');
       }
+      await autoSync.markSynced(file.name).catch(() => undefined);
       return res.json({
         success: true,
         message: startNow ? `Sent and started: ${file.name}` : `Sent to printer: ${file.name}`,

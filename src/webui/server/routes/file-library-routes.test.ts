@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import express from 'express';
+import { AutoSyncService } from '../../../services/AutoSyncService';
 import { FileLibraryService } from '../../../services/FileLibraryService';
 import { registerFileLibraryRoutes } from './file-library-routes';
 import { startTestServer, type TestServerHandle } from './test-server';
@@ -29,14 +30,20 @@ describe('file-library-routes', () => {
   let server: TestServerHandle;
   let printerState: string | undefined;
   let hasMaterialStation: boolean;
+  let autoSyncEnabled: boolean;
   const startJob = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 
   beforeEach(async () => {
     dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'ffui-routes-'));
     printerState = 'Ready';
     hasMaterialStation = true;
+    autoSyncEnabled = true;
     startJob.mockReset().mockResolvedValue({ success: true, fileName: 'a.gcode', started: false });
     const library = new FileLibraryService(dir, { minFreeBytes: 0 });
+    const autoSync = new AutoSyncService(`${dir}.sync.json`, library, {} as never, () => ({
+      enabled: autoSyncEnabled,
+      cleanup: { enabled: false, dryRun: true, keepNewest: 15 },
+    }));
     const deps = {
       backendManager: {
         isBackendReady: jest.fn().mockReturnValue(true),
@@ -51,7 +58,7 @@ describe('file-library-routes', () => {
     };
     server = await startTestServer((app: express.Application) => {
       const router = express.Router();
-      registerFileLibraryRoutes(router, deps as any, library);
+      registerFileLibraryRoutes(router, deps as any, library, autoSync);
       app.use('/api', router);
     });
   });
@@ -59,6 +66,7 @@ describe('file-library-routes', () => {
   afterEach(async () => {
     await server.close();
     await fsp.rm(dir, { recursive: true, force: true });
+    await fsp.rm(`${dir}.sync.json`, { force: true });
   });
 
   async function upload(name: string, body: string, query = '') {
@@ -94,6 +102,34 @@ describe('file-library-routes', () => {
     });
     expect(removed.status).toBe(200);
     expect(await fsp.readdir(dir)).toEqual([]);
+  });
+
+  it('lists the sync state, requeues a file and marks manual sends as synced', async () => {
+    const list = async () =>
+      (
+        (await (await fetch(`${server.baseUrl}/api/files/library`)).json()) as {
+          files: { name: string; syncState: string }[];
+        }
+      ).files;
+    const post = (suffix: string) =>
+      fetch(`${server.baseUrl}/api/files/library/a.gcode/${suffix}`, { method: 'POST' });
+
+    expect(await list()).toEqual([]); // first listing takes the (empty) baseline
+    await upload('a.gcode', 'G28\n');
+    expect((await list())[0]).toMatchObject({ name: 'a.gcode', syncState: 'queued' });
+
+    expect((await post('send')).status).toBe(200);
+    expect((await list())[0].syncState).toBe('synced');
+
+    expect((await post('requeue')).status).toBe(200);
+    expect((await list())[0].syncState).toBe('queued');
+    expect(
+      (await fetch(`${server.baseUrl}/api/files/library/nope.gcode/requeue`, { method: 'POST' }))
+        .status
+    ).toBe(404);
+
+    autoSyncEnabled = false;
+    expect((await post('requeue')).status).toBe(409);
   });
 
   it('rejects bad names and traversal attempts', async () => {
