@@ -1,8 +1,7 @@
 /**
  * @fileoverview Centralized WebUI application state and shared singletons.
  *
- * Hosts the mutable AppState container along with layout managers, context
- * tracking helpers, and layout configuration constants. Provides accessor
+ * Hosts the mutable AppState container along with context tracking helpers. Provides accessor
  * utilities so other modules can read and mutate shared state without reaching
  * into module-level variables directly.
  */
@@ -19,12 +18,7 @@ import type {
   SpoolAssignment,
   SpoolSummary,
   WebUIJobFile,
-  WebUISettings,
 } from '../app.js';
-import { componentRegistry } from '../grid/WebUIComponentRegistry.js';
-import { WebUIGridManager } from '../grid/WebUIGridManager.js';
-import { WebUILayoutPersistence } from '../grid/WebUILayoutPersistence.js';
-import { WebUIMobileLayoutManager } from '../grid/WebUIMobileLayoutManager.js';
 
 export class AppState {
   public isAuthenticated: boolean = false;
@@ -49,26 +43,11 @@ export class AppState {
 
 export const state = new AppState();
 
-export const gridManager = new WebUIGridManager('.webui-grid-desktop');
-export const mobileLayoutManager = new WebUIMobileLayoutManager('.webui-grid-mobile');
-export const layoutPersistence = new WebUILayoutPersistence();
-export const ALL_COMPONENT_IDS = componentRegistry.getAllIds();
-
-export const DEFAULT_SETTINGS: WebUISettings = {
-  visibleComponents: [...ALL_COMPONENT_IDS],
-  editMode: false,
-};
-
-export const MOBILE_BREAKPOINT = 768;
 export const DEMO_SERIAL = 'demo-layout';
 
 let currentPrinterSerial: string | null = null;
 let currentContextId: string | null = null;
-let currentSettings: WebUISettings = { ...DEFAULT_SETTINGS };
-let gridInitialized = false;
-let gridChangeUnsubscribe: (() => void) | null = null;
 export const contextById = new Map<string, PrinterContext>();
-let isMobileLayout = false;
 
 /**
  * Optional overrides that let a caller other than the file dialog drive the
@@ -77,7 +56,10 @@ let isMobileLayout = false;
  */
 export interface MaterialMatchingHooks {
   /** Runs in place of the default job-start request. Return true to close the modal. */
-  onConfirm?: (mappings: MaterialMapping[], spoolAssignments: SpoolAssignment[]) => Promise<boolean>;
+  onConfirm?: (
+    mappings: MaterialMapping[],
+    spoolAssignments: SpoolAssignment[]
+  ) => Promise<boolean>;
   /** Runs when the modal is dismissed without confirming. */
   onCancel?: () => void;
 }
@@ -115,38 +97,6 @@ export function getCurrentContextId(): string | null {
 
 export function setCurrentContextId(contextId: string | null): void {
   currentContextId = contextId;
-}
-
-export function getCurrentSettings(): WebUISettings {
-  return currentSettings;
-}
-
-export function updateCurrentSettings(settings: WebUISettings): void {
-  currentSettings = settings;
-}
-
-export function isGridInitialized(): boolean {
-  return gridInitialized;
-}
-
-export function setGridInitialized(initialized: boolean): void {
-  gridInitialized = initialized;
-}
-
-export function getGridChangeUnsubscribe(): (() => void) | null {
-  return gridChangeUnsubscribe;
-}
-
-export function setGridChangeUnsubscribe(callback: (() => void) | null): void {
-  gridChangeUnsubscribe = callback;
-}
-
-export function isMobile(): boolean {
-  return isMobileLayout;
-}
-
-export function setMobileLayout(mobile: boolean): void {
-  isMobileLayout = mobile;
 }
 
 export function getMaterialMatchingState(): MaterialMatchingState | null {

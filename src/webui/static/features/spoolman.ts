@@ -15,12 +15,12 @@ import type {
   SpoolSelectResponse,
   SpoolSummary,
 } from '../app.js';
-import { getCurrentSettings, state } from '../core/AppState.js';
+import { state } from '../core/AppState.js';
 import { apiRequest } from '../core/Transport.js';
 import { $, hideElement, showElement, showToast } from '../shared/dom.js';
 import { updateSpoolmanPanelState } from '../ui/panels.js';
 import { getCurrentContextId } from './context-switching.js';
-import { applySettings, refreshSettingsUI } from './layout-theme.js';
+import { applyPanelVisibility } from './layout-theme.js';
 
 let spoolSearchDebounceTimer: number | null = null;
 let handlersRegistered = false;
@@ -47,9 +47,7 @@ export async function loadSpoolmanConfig(): Promise<void> {
         await fetchActiveSpoolForContext(result.contextId);
       }
 
-      const settings = getCurrentSettings();
-      applySettings(settings);
-      refreshSettingsUI(settings);
+      applyPanelVisibility();
       updateSpoolmanPanelState();
     }
   } catch (error) {
@@ -349,8 +347,7 @@ export function setupSpoolmanHandlers(): void {
   }
   handlersRegistered = true;
 
-  attachPanelButtonHandlers($('webui-grid-desktop'));
-  attachPanelButtonHandlers($('webui-grid-mobile'));
+  attachPanelButtonHandlers($('views'));
 
   $('spoolman-modal-close')?.addEventListener('click', () => closeSpoolSelectionModal());
   $('spoolman-modal-cancel')?.addEventListener('click', () => closeSpoolSelectionModal());

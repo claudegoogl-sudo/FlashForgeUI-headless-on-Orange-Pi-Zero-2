@@ -143,8 +143,8 @@ async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | nul
  */
 export async function refreshIfsStationCard(): Promise<void> {
   const panel = getCardPanel();
-  if (!panel || panel.offsetParent === null) {
-    return; // not in the layout / hidden — nothing to do
+  if (!panel || panel.classList.contains('hidden')) {
+    return; // not mounted, or this printer has no material station
   }
 
   if (!state.isConnected) {
@@ -225,10 +225,12 @@ function openSlotEditor(slot: MaterialSlotInfo): void {
   const materialOptions = paletteMaterials
     .map((m) => `<option value="${m}"${m === selectedMaterial ? ' selected' : ''}>${m}</option>`)
     .join('');
-  const swatches = paletteColors.map(
-    (c) =>
-      `<button type="button" class="ifs-swatch${c.hex === selectedHex ? ' selected' : ''}" data-hex="${c.hex}" title="${c.name}" aria-label="${c.name}" style="--swatch:${c.hex}"><span class="ifs-swatch-check">✓</span></button>`
-  ).join('');
+  const swatches = paletteColors
+    .map(
+      (c) =>
+        `<button type="button" class="ifs-swatch${c.hex === selectedHex ? ' selected' : ''}" data-hex="${c.hex}" title="${c.name}" aria-label="${c.name}" style="--swatch:${c.hex}"><span class="ifs-swatch-check">✓</span></button>`
+    )
+    .join('');
   const spoolmanConfigured = Boolean(state.spoolmanConfig?.serverUrl);
   const spoolmanBtn = spoolmanConfigured
     ? '<button type="button" class="secondary-btn ifs-editor-spoolman">Set from Spoolman</button>'

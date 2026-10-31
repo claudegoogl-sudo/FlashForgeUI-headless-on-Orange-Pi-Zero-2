@@ -98,9 +98,9 @@ function setupDiscoveryButton(): void {
     loadSavedPrinters();
   });
 
-  const settingsBtn = header.querySelector('#settings-button');
-  if (settingsBtn) {
-    header.insertBefore(addButton, settingsBtn);
+  const connection = header.querySelector('.connection-status');
+  if (connection) {
+    header.insertBefore(addButton, connection);
   } else {
     header.appendChild(addButton);
   }

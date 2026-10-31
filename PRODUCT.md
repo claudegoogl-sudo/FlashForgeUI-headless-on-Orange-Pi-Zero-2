@@ -23,11 +23,11 @@ Not a generic printer dashboard: it carries features of this fork that no neighb
 ## Operating Context
 - Served by a single `pkg` binary; static files are bundled. A deploy is a rebuild and binary swap.
 - Viewed over Tailscale; the Pi also serves the camera, so payload must stay small and nothing animates heavy.
-- Dark theme today; the app has a theme setting (`features/layout-theme.ts`) and a gridstack layout with an edit mode.
+- Dark only (the user rejected a light theme). The five theme colours can still be changed in Settings.
 
 ## Capabilities and Constraints
-- Keep the existing element IDs and feature modules; this is a re-skin and re-layout.
-- Keep the gridstack layout and edit mode. Mobile order: state and progress, camera, temperatures, then controls.
+- Keep the existing element IDs and feature modules; the shell and layout were replaced.
+- App shell: a dock with screens (Print, Heat, Move, Files, Light), each inside the viewport, never scrolling. The camera is the hero. The user chose this over the customisable grid (2026-10-31).
 - Self-host fonts (woff2, subset, one or two families). No CDN, no framework, no large dependency.
 - Camera stream (go2rtc) is never cropped or distorted.
 - Destructive or rare actions (cancel print, reboot, delete file) are separated and confirmed. Disabled controls say why when cheap.

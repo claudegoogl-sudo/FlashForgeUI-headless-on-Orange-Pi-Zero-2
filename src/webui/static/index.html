@@ -6,8 +6,6 @@
   <meta name="theme-color" content="#12171b">
   <title>FlashForge Web UI</title>
   <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="stylesheet" href="gridstack.min.css">
-  <link rel="stylesheet" href="gridstack-extra.min.css">
   <link rel="stylesheet" href="webui.css">
   <script src="lucide.min.js"></script>
 </head>
@@ -77,20 +75,6 @@
           >
             <i data-lucide="power" aria-hidden="true"></i>
           </button>
-          <button id="edit-mode-toggle" class="edit-mode-toggle" aria-pressed="false" type="button">
-            <i id="edit-mode-lock-icon" class="lock-icon" data-lucide="lock" aria-hidden="true"></i>
-            <span class="edit-text">Edit layout</span>
-          </button>
-          <button
-            id="settings-button"
-            class="settings-button"
-            type="button"
-            aria-haspopup="dialog"
-            aria-controls="settings-modal"
-            title="Settings" aria-label="Settings"
-          >
-            <i data-lucide="settings" aria-hidden="true"></i>
-          </button>
           <div class="connection-status" role="status" data-connected="false">
             <span class="connection-indicator" id="connection-indicator" aria-hidden="true"></span>
             <span id="connection-text">Disconnected</span>
@@ -104,17 +88,67 @@
         <button id="connection-reload" class="secondary-btn" type="button">Reload page</button>
       </div>
 
-      <!-- Main Layout -->
+      <!-- Views: Print and Move share the camera stage; Heat, Files and Light are screens of their own -->
       <main class="main-layout" id="main-content" tabindex="-1">
-        <!-- Desktop GridStack Layout -->
-        <div class="grid-stack webui-grid webui-grid-desktop" id="webui-grid-desktop" aria-live="polite">
-          <!-- Components injected dynamically via WebUIGridManager -->
+        <div class="views" id="views" data-active-view="print">
+          <section class="v v-stage" aria-label="Print and camera">
+            <div class="stage-col">
+              <div class="stage-head">
+                <div class="slot slot-status" data-slot="status"></div>
+                <div class="stage-toggle" id="stage-toggle" role="group" aria-label="Stage">
+                  <button type="button" class="control-btn" data-stage="camera" aria-pressed="true">Camera</button>
+                  <button type="button" class="control-btn" data-stage="layers" aria-pressed="false">Layers</button>
+                </div>
+              </div>
+              <div class="stage-wrap">
+                <div class="slot slot-stage" data-slot="stage" data-stage-active="camera"></div>
+              </div>
+            </div>
+            <aside class="rail rail-print slot" data-slot="print-rail"></aside>
+            <aside class="rail rail-move slot" data-slot="move-rail"></aside>
+          </section>
+          <section class="v v-heat" aria-label="Heat and material">
+            <div class="slot" data-slot="heat-a"></div>
+            <div class="slot" data-slot="heat-b"></div>
+          </section>
+          <section class="v v-files" aria-label="Files">
+            <div class="slot" data-slot="files-top"></div>
+            <div id="file-library-modal" class="lib-view">
+              <div class="lib-toolbar">
+                <label class="primary-btn lib-upload-btn">
+                  Add files
+                  <input type="file" id="lib-upload-input" accept=".gcode,.gx,.3mf" multiple hidden>
+                </label>
+                <button id="lib-printer-files" class="secondary-btn" type="button">Printer files</button>
+                <button id="lib-refresh" class="secondary-btn" type="button">Refresh</button>
+              </div>
+              <div id="lib-progress" class="lib-progress hidden">
+                <div class="lib-progress-track"><div id="lib-progress-bar" class="lib-progress-bar"></div></div>
+                <div id="lib-progress-label" class="lib-progress-label"></div>
+              </div>
+              <h2 id="lib-title" class="lib-title">Library</h2>
+              <div class="lib-scroll" tabindex="0" aria-labelledby="lib-title">
+                <div id="lib-list" class="lib-list"></div>
+              </div>
+              <div class="lib-footer">
+                <span id="lib-summary"></span>
+                <span class="lib-hint">Stored on the WebUI host and sent to the printer automatically when it is idle.</span>
+              </div>
+            </div>
+          </section>
+          <section class="v v-light" aria-label="Light">
+            <div class="slot" data-slot="light-a"></div>
+          </section>
         </div>
 
-        <!-- Mobile Static Layout (hidden on desktop) -->
-        <div class="webui-grid webui-grid-mobile" id="webui-grid-mobile" aria-live="polite">
-          <!-- Components injected in predefined mobile order -->
-        </div>
+        <nav class="dock" id="dock" aria-label="Sections">
+          <button type="button" class="dock-btn" data-view-target="print" style="--h:210"><i data-lucide="box" aria-hidden="true"></i><span>Print</span></button>
+          <button type="button" class="dock-btn" data-view-target="heat" style="--h:28"><i data-lucide="thermometer" aria-hidden="true"></i><span>Heat</span></button>
+          <button type="button" class="dock-btn" data-view-target="move" style="--h:140"><i data-lucide="move" aria-hidden="true"></i><span>Move</span></button>
+          <button type="button" class="dock-btn" data-view-target="files" style="--h:270"><i data-lucide="folder" aria-hidden="true"></i><span>Files</span></button>
+          <button type="button" class="dock-btn" data-view-target="light" style="--h:45"><i data-lucide="lightbulb" aria-hidden="true"></i><span>Light</span></button>
+          <button id="settings-button" class="dock-gear" type="button" aria-haspopup="dialog" aria-controls="settings-modal" title="Settings" aria-label="Settings"><i data-lucide="settings" aria-hidden="true"></i></button>
+        </nav>
       </main>
 
       <!-- Confirmation dialog (shared; see confirmAction in shared/dom.ts) -->
@@ -142,30 +176,6 @@
           </div>
           <div class="modal-body">
             <section class="settings-section">
-              <h3>Panels</h3>
-              <label><input type="checkbox" id="toggle-camera" data-component-id="camera" checked> Camera</label>
-              <label><input type="checkbox" id="toggle-controls" data-component-id="controls" checked> Controls</label>
-              <label><input type="checkbox" id="toggle-model-preview" data-component-id="model-preview" checked> Model preview</label>
-              <label><input type="checkbox" id="toggle-printer-state" data-component-id="printer-state" checked> Printer state</label>
-              <label><input type="checkbox" id="toggle-temp-control" data-component-id="temp-control" checked> Temperature (single nozzle)</label>
-              <label><input type="checkbox" id="toggle-creator5-temperature" data-component-id="creator5-temperature" checked> Temperature (multi-tool)</label>
-              <label><input type="checkbox" id="toggle-filtration-tvoc" data-component-id="filtration-tvoc" checked> Filtration and TVOC</label>
-              <label><input type="checkbox" id="toggle-spoolman-tracker" data-component-id="spoolman-tracker" checked> Spoolman</label>
-              <label><input type="checkbox" id="toggle-ifs-station" data-component-id="ifs-station" checked> Material station</label>
-              <label><input type="checkbox" id="toggle-job-progress" data-component-id="job-progress" checked> Job</label>
-              <label><input type="checkbox" id="toggle-job-details" data-component-id="job-details" checked> Job details</label>
-              <label><input type="checkbox" id="toggle-gcode-viewer" data-component-id="gcode-viewer" checked> G-code view</label>
-              <label><input type="checkbox" id="toggle-light-timer" data-component-id="light-timer" checked> Light timer</label>
-            </section>
-            <section class="settings-section">
-              <h3>Layout</h3>
-              <label class="toggle-edit-mode">
-                <input type="checkbox" id="toggle-edit-mode">
-                <span>Edit layout</span>
-                <span class="help-text">Drag and resize panels. Mobile uses a fixed order.</span>
-              </label>
-            </section>
-            <section class="settings-section">
               <h3>Colors</h3>
               <p class="help-text">Change the color scheme. Colors apply when you select Apply colors.</p>
               <div class="theme-color-grid">
@@ -182,7 +192,7 @@
                   <input type="color" id="webui-theme-background" class="color-input">
                 </label>
                 <label>
-                  <span>Panels</span>
+                  <span>Dialogs</span>
                   <input type="color" id="webui-theme-surface" class="color-input">
                 </label>
                 <label>
@@ -226,13 +236,9 @@
                 <button id="ssh-reset-btn" class="secondary-btn" type="button">Reset to Defaults</button>
               </div>
             </section>
-            <section class="settings-section">
-              <h3>Reset</h3>
-              <button id="reset-layout-btn" class="secondary-btn" type="button">Reset Layout to Default</button>
-            </section>
           </div>
           <div class="modal-footer">
-            <button id="save-settings-btn" class="primary-btn" type="button">Save</button>
+            <button id="save-settings-btn" class="primary-btn" type="button">Done</button>
           </div>
         </div>
       </div>
@@ -379,35 +385,6 @@
               </div>
               <div class="job-upload-progress-status" id="job-upload-progress-status">Preparing upload…</div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Job Library Modal (files stored on the WebUI host) -->
-      <div id="file-library-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lib-title">
-        <div class="modal-content lib-modal">
-          <div class="modal-header">
-            <h2 id="lib-title">Library</h2>
-            <button id="lib-close" class="close-btn" aria-label="Close library">&times;</button>
-          </div>
-          <div class="lib-toolbar">
-            <label class="primary-btn lib-upload-btn">
-              Add files
-              <input type="file" id="lib-upload-input" accept=".gcode,.gx,.3mf" multiple hidden>
-            </label>
-            <button id="lib-printer-files" class="secondary-btn" type="button">Printer files</button>
-            <button id="lib-refresh" class="secondary-btn" type="button">Refresh</button>
-          </div>
-          <div id="lib-progress" class="lib-progress hidden">
-            <div class="lib-progress-track"><div id="lib-progress-bar" class="lib-progress-bar"></div></div>
-            <div id="lib-progress-label" class="lib-progress-label"></div>
-          </div>
-          <div class="modal-body">
-            <div id="lib-list" class="lib-list"></div>
-          </div>
-          <div class="lib-footer">
-            <span id="lib-summary"></span>
-            <span class="lib-hint">Stored on the WebUI host and sent to the printer automatically when it is idle.</span>
           </div>
         </div>
       </div>
@@ -1039,9 +1016,6 @@
 
     customElements.define('video-rtc', VideoRTC);
   </script>
-
-  <!-- GridStack library for drag-and-drop layout management -->
-  <script src="gridstack-all.js"></script>
 
   <!-- TypeScript compiled to JavaScript -->
   <script type="module" src="app.js"></script>

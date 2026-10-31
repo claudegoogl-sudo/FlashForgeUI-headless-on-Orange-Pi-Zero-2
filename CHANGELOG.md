@@ -15,13 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **WebUI redesign ("drafting sheet").** New look and layout for the whole front end; see `DESIGN.md` and `PRODUCT.md`. Panels share hairlines on one 12-column sheet. The first row is a title block (printer state, job with a dimension-line progress bar, job details). Heaters show one tile per tool in the filament colour of its material-station slot. The Controls panel has one primary action (Pause or Resume), a Light On/Off segment, Library and Upload job, a closed "More" group, and a separate Cancel print. A hint line says why controls are unavailable. Archivo (variable, OFL, 42 KB) is served from the host; there is no CDN.
+- **WebUI redesign: an app with five screens in brushed anodised metal.** See `DESIGN.md` and `PRODUCT.md`. A dock switches between Print, Heat, Move, Files and Light; each screen fits the viewport, so nothing scrolls on a phone or a laptop. The camera is the largest element, is never cropped, and nothing is drawn over it. Print has the tool temperatures, the job (percent, layer, minutes left, dimension-line bar, speed) with Pause or Resume and Cancel print inside it, and a Camera / Layers switch for the G-code view. Heat has per-tool Set and Off and the material station. Move shows the jog pad disabled: the Creator 5 firmware has no move command over its network API. Files holds Upload job, Recent and Local files and the library. Light holds On / Off and the light timer. Numbers ease to new values and the dimension lines grow smoothly (off with reduced motion). The colour is a brushed grain (`img/brushed.webp`, CC0, from ambientCG Metal 009) with one anodised hue per screen. Archivo (variable, OFL) is served from the host; there is no CDN.
+- **The customisable GridStack layout, edit mode and the panel-visibility settings are removed** (the `gridstack` dependency too). Saved layouts in the browser are ignored. Panels that a printer has no feature for are hidden automatically.
 - **Cancel print and library Delete ask for confirmation** in a page dialog (`confirmAction`). Cancel print had no confirmation before.
-- **Mobile order** is now state, job, camera, temperatures, controls. **Default desktop layout changed (layout version 3):** layouts saved by the browser for an older grid are dropped once and the new default is used.
 - **Theme:** the five colours still work (Settings > Colors). Saved values equal to the old defaults (the blue palette) are shown in the new palette; custom colours are kept. `DEFAULT_THEME` is the new palette.
 - **Camera is no longer cropped** (`object-fit: contain`). The chamber row is hidden when the printer reports no plausible chamber temperature (the Creator 5 reports about -100 C).
-- **Lost connection:** a banner and dimmed values show that the numbers are the last ones received.
-- Labels are sentence case, for example "Log out", "Edit layout", "Upload job". The Settings panel names match the panel titles.
+- **Lost connection:** a banner, dimmed graphics and disabled controls show that the numbers are the last ones received.
+- Labels are sentence case, for example "Log out", "Upload job". The Settings dialog keeps Colors and SSH only; its Panels and Layout sections are gone.
 
 ### Fixed
 

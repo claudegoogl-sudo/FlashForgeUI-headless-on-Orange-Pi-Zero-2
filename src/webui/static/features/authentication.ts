@@ -8,15 +8,7 @@
  */
 
 import type { ApiResponse, AuthResponse, AuthStatusResponse } from '../app.js';
-import {
-  contextById,
-  DEFAULT_SETTINGS,
-  gridManager,
-  isGridInitialized,
-  setCurrentPrinterSerial,
-  state,
-  updateCurrentSettings,
-} from '../core/AppState.js';
+import { contextById, setCurrentPrinterSerial, state } from '../core/AppState.js';
 import { apiRequest, apiRequestWithMetadata, disconnectWebSocket } from '../core/Transport.js';
 import { $, hideElement, setTextContent, showElement } from '../shared/dom.js';
 import { closeSettingsModal } from './layout-theme.js';
@@ -133,12 +125,7 @@ export async function logout(): Promise<void> {
   disconnectWebSocket();
 
   setCurrentPrinterSerial(null);
-  updateCurrentSettings({ ...DEFAULT_SETTINGS });
   contextById.clear();
-  if (isGridInitialized()) {
-    gridManager.clear();
-    gridManager.disableEdit();
-  }
   closeSettingsModal();
 
   if (state.authRequired) {

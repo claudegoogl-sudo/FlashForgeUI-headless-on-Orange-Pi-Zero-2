@@ -1,39 +1,18 @@
 /**
- * @fileoverview Layout and theme management utilities for the WebUI client.
+ * @fileoverview Panel mounting, panel availability, the settings dialog and the colour theme.
  *
- * Provides GridStack initialization, per-printer layout persistence, settings
- * dialog management, responsive handling, and WebUI theme customization.
- * Exposes hooks that let the orchestrator react to layout rehydration without
- * introducing direct coupling to UI rendering functions.
+ * Panels are mounted into the views once (see ui/views.ts). Which panels apply to the
+ * connected printer is decided here from its features. The theme section applies the five
+ * `--theme-*` colours the server stores; saved values that equal the old default blue
+ * palette are shown in the current default palette.
  */
 
-import type { ApiResponse, PrinterFeatures, PrinterStatus, WebUISettings } from '../app.js';
-import {
-  ALL_COMPONENT_IDS,
-  DEFAULT_SETTINGS,
-  DEMO_SERIAL,
-  getCurrentPrinterSerial,
-  getCurrentSettings,
-  getGridChangeUnsubscribe,
-  getCurrentContextId as getStoredContextId,
-  gridManager,
-  isGridInitialized,
-  isMobile as isMobileLayoutEnabled,
-  layoutPersistence,
-  mobileLayoutManager,
-  setCurrentPrinterSerial,
-  setGridChangeUnsubscribe,
-  setGridInitialized,
-  setMobileLayout,
-  state,
-  updateCurrentSettings,
-} from '../core/AppState.js';
+import type { ApiResponse, PrinterFeatures, PrinterStatus } from '../app.js';
+import { getCurrentContextId as getStoredContextId, state } from '../core/AppState.js';
 import { apiRequest, apiRequestWithMetadata } from '../core/Transport.js';
-import type { WebUIComponentLayout, WebUIGridLayout } from '../grid/types.js';
-import { componentRegistry } from '../grid/WebUIComponentRegistry.js';
 import { $, showToast } from '../shared/dom.js';
-import { updateEditModeToggle } from '../ui/header.js';
-import { teardownCameraStreamElements } from './camera.js';
+import { componentRegistry } from '../ui/panel-registry.js';
+import { mountPanels } from '../ui/views.js';
 
 export interface LayoutUiHooks {
   onConnectionStatusUpdate?: (connected: boolean) => void;
@@ -46,67 +25,19 @@ let layoutUiHooks: LayoutUiHooks = {};
 
 export function initializeLayout(hooks: LayoutUiHooks = {}): void {
   layoutUiHooks = { ...hooks };
-  updateEditModeToggle(getCurrentSettings().editMode);
 }
 
 export function setupLayoutEventHandlers(): void {
-  const settingsButton = $('settings-button') as HTMLButtonElement | null;
-  const closeButton = $('close-settings') as HTMLButtonElement | null;
-  const saveButton = $('save-settings-btn') as HTMLButtonElement | null;
-  const resetButton = $('reset-layout-btn') as HTMLButtonElement | null;
   const modal = $('settings-modal');
-  const modalEditToggle = $('toggle-edit-mode') as HTMLInputElement | null;
-  const applyThemeButton = $('apply-webui-theme-btn') as HTMLButtonElement | null;
-  const resetThemeButton = $('reset-webui-theme-btn') as HTMLButtonElement | null;
 
-  settingsButton?.addEventListener('click', () => openSettingsModal());
-  closeButton?.addEventListener('click', () => closeSettingsModal());
-
-  saveButton?.addEventListener('click', () => {
-    const checkboxes = document.querySelectorAll<HTMLInputElement>(
-      '#settings-modal input[type="checkbox"][data-component-id]'
-    );
-    const visibleComponents = Array.from(checkboxes)
-      .filter((checkbox) => checkbox.checked && !checkbox.disabled)
-      .map((checkbox) => checkbox.dataset.componentId ?? '')
-      .filter((componentId): componentId is string => componentId.length > 0);
-
-    const editMode = modalEditToggle?.checked ?? false;
-
-    const updatedSettings: WebUISettings = {
-      visibleComponents:
-        visibleComponents.length > 0 ? visibleComponents : [...DEFAULT_SETTINGS.visibleComponents],
-      editMode,
-    };
-
-    updateCurrentSettings(updatedSettings);
-    applySettings(updatedSettings);
-    persistSettings();
-    closeSettingsModal();
-  });
-
-  resetButton?.addEventListener('click', () => {
-    resetLayoutForCurrentPrinter();
-    refreshSettingsUI(getCurrentSettings());
-  });
-
-  applyThemeButton?.addEventListener('click', () => {
+  $('settings-button')?.addEventListener('click', () => openSettingsModal());
+  $('close-settings')?.addEventListener('click', () => closeSettingsModal());
+  $('save-settings-btn')?.addEventListener('click', () => closeSettingsModal());
+  $('apply-webui-theme-btn')?.addEventListener('click', () => {
     void handleApplyWebUITheme();
   });
-
-  resetThemeButton?.addEventListener('click', () => {
+  $('reset-webui-theme-btn')?.addEventListener('click', () => {
     loadDefaultThemeIntoSettings();
-  });
-
-  modalEditToggle?.addEventListener('change', (event) => {
-    const settings = getCurrentSettings();
-    const updatedSettings: WebUISettings = {
-      ...settings,
-      editMode: (event.target as HTMLInputElement).checked,
-    };
-    updateCurrentSettings(updatedSettings);
-    applySettings(updatedSettings);
-    persistSettings();
   });
 
   modal?.addEventListener('click', (event) => {
@@ -122,86 +53,6 @@ export function setupLayoutEventHandlers(): void {
   });
 }
 
-export function setupViewportListener(): void {
-  const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
-
-  if (mediaQuery.addEventListener) {
-    mediaQuery.addEventListener('change', handleViewportChange);
-  } else {
-    mediaQuery.addListener(handleViewportChange);
-  }
-
-  let resizeTimeout: number;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = window.setTimeout(handleViewportChange, 250);
-  });
-}
-
-export const MOBILE_BREAKPOINT = 768;
-
-export function handleViewportChange(): void {
-  const mobile = isMobileViewport();
-
-  if (mobile === isMobileLayoutEnabled()) {
-    return;
-  }
-
-  if (!mobile && isGridInitialized()) {
-    saveCurrentLayoutSnapshot();
-  }
-
-  loadLayoutForCurrentPrinter();
-  setMobileLayout(mobile);
-}
-
-export function isMobileViewport(): boolean {
-  return window.innerWidth <= MOBILE_BREAKPOINT;
-}
-
-export function ensureGridInitialized(): void {
-  if (isGridInitialized()) {
-    return;
-  }
-
-  gridManager.initialize({
-    column: 12,
-    cellHeight: 72,
-    margin: 0,
-    staticGrid: true,
-    float: false,
-    animate: false,
-    minRow: 11,
-  });
-  gridManager.disableEdit();
-  setGridInitialized(true);
-}
-
-export function teardownDesktopLayout(): void {
-  if (!isGridInitialized()) {
-    return;
-  }
-
-  const unsubscribe = getGridChangeUnsubscribe();
-  if (unsubscribe) {
-    unsubscribe();
-    setGridChangeUnsubscribe(null);
-  }
-
-  gridManager.disableEdit();
-  gridManager.clear();
-}
-
-export function teardownMobileLayout(): void {
-  mobileLayoutManager.clear();
-}
-
-export function resetLayoutContainers(): void {
-  teardownCameraStreamElements();
-  teardownDesktopLayout();
-  teardownMobileLayout();
-}
-
 export function rehydrateLayoutState(): void {
   layoutUiHooks.onConnectionStatusUpdate?.(state.isConnected);
 
@@ -212,236 +63,25 @@ export function rehydrateLayoutState(): void {
   layoutUiHooks.onSpoolmanPanelUpdate?.();
 }
 
-export function ensureCompleteLayout(baseLayout: WebUIGridLayout | null): WebUIGridLayout {
-  const defaults = componentRegistry.getDefaultLayout();
-  const incoming = baseLayout ?? defaults;
-  const normalizedComponents: Record<string, WebUIGridLayout['components'][string]> = {};
-
-  for (const componentId of ALL_COMPONENT_IDS) {
-    const defaultConfig = defaults.components?.[componentId];
-    const customConfig = incoming.components?.[componentId];
-    normalizedComponents[componentId] = sanitizeLayoutConfig(
-      componentId,
-      defaultConfig,
-      customConfig
-    );
-  }
-
-  const hidden = (incoming.hiddenComponents ?? []).filter((componentId) =>
-    ALL_COMPONENT_IDS.includes(componentId)
-  );
-
-  return {
-    version: defaults.version,
-    components: normalizedComponents,
-    hiddenComponents: hidden.length > 0 ? hidden : undefined,
-  };
-}
-
-export function sanitizeLayoutConfig(
-  componentId: string,
-  defaults: WebUIComponentLayout | undefined,
-  custom: WebUIComponentLayout | undefined
-): WebUIComponentLayout {
-  const source = custom ?? defaults;
-  if (!source) {
-    throw new Error(`Missing layout configuration for component ${componentId}`);
-  }
-
-  const toInteger = (value: number | undefined): number | undefined => {
-    if (value === undefined || Number.isNaN(value)) {
-      return undefined;
-    }
-    return Math.max(0, Math.round(value));
-  };
-
-  const minW = toInteger(custom?.minW ?? defaults?.minW);
-  const minH = toInteger(custom?.minH ?? defaults?.minH);
-  const maxW = toInteger(custom?.maxW ?? defaults?.maxW);
-  const maxH = toInteger(custom?.maxH ?? defaults?.maxH);
-
-  let width = Math.max(1, toInteger(source.w) ?? toInteger(defaults?.w) ?? 1);
-  if (minW !== undefined) {
-    width = Math.max(width, minW);
-  }
-  if (maxW !== undefined) {
-    width = Math.min(width, maxW);
-  }
-
-  let height = Math.max(1, toInteger(source.h) ?? toInteger(defaults?.h) ?? 1);
-  if (minH !== undefined) {
-    height = Math.max(height, minH);
-  }
-  if (maxH !== undefined) {
-    height = Math.min(height, maxH);
-  }
-
-  return {
-    x: toInteger(source.x) ?? toInteger(defaults?.x) ?? 0,
-    y: toInteger(source.y) ?? toInteger(defaults?.y) ?? 0,
-    w: width,
-    h: height,
-    minW,
-    minH,
-    maxW,
-    maxH,
-    locked: custom?.locked ?? defaults?.locked ?? false,
-  };
-}
-
-export function loadSettingsForSerial(serialNumber: string | null): WebUISettings {
-  const stored = layoutPersistence.loadSettings(serialNumber) as Partial<WebUISettings> | null;
-  if (!stored) {
-    return { ...DEFAULT_SETTINGS };
-  }
-
-  const visibleComponents = Array.isArray(stored.visibleComponents)
-    ? stored.visibleComponents.filter(
-        (componentId): componentId is string =>
-          typeof componentId === 'string' && ALL_COMPONENT_IDS.includes(componentId)
-      )
-    : [...DEFAULT_SETTINGS.visibleComponents];
-
-  if (visibleComponents.length === 0) {
-    visibleComponents.push(...DEFAULT_SETTINGS.visibleComponents);
-  }
-
-  return {
-    visibleComponents,
-    editMode: stored.editMode === true,
-  };
-}
-
-export function persistSettings(): void {
-  const serial = getCurrentPrinterSerial();
-  if (!serial) {
-    return;
-  }
-  layoutPersistence.saveSettings(serial, getCurrentSettings());
-}
-
-export function applySettings(settings: WebUISettings): void {
-  const mobile = isMobileViewport();
-
-  for (const componentId of ALL_COMPONENT_IDS) {
-    const shouldShow = shouldComponentBeVisible(
-      componentId,
-      settings,
-      state.printerFeatures ?? null
-    );
-
-    if (mobile) {
-      if (shouldShow) {
-        mobileLayoutManager.showComponent(componentId);
-      } else {
-        mobileLayoutManager.hideComponent(componentId);
-      }
-    } else {
-      if (!isGridInitialized()) {
-        return;
-      }
-      if (shouldShow) {
-        gridManager.showComponent(componentId);
-      } else {
-        gridManager.hideComponent(componentId);
-      }
-    }
-  }
-
-  if (!mobile && isGridInitialized()) {
-    if (settings.editMode) {
-      gridManager.enableEdit();
-    } else {
-      gridManager.disableEdit();
-    }
-  }
-
-  updateEditModeToggle(mobile ? false : settings.editMode);
-}
-
-export function refreshSettingsUI(settings: WebUISettings): void {
-  const checkboxes = document.querySelectorAll<HTMLInputElement>(
-    '#settings-modal input[type="checkbox"][data-component-id]'
-  );
-
-  checkboxes.forEach((checkbox) => {
-    const componentId = checkbox.dataset.componentId;
-    if (!componentId) {
-      return;
-    }
-
-    const supported = isComponentSupported(componentId, state.printerFeatures ?? null);
-    checkbox.checked = settings.visibleComponents.includes(componentId) && supported;
-    checkbox.disabled = !supported;
-  });
-
-  updateEditModeToggle(settings.editMode);
-}
-
-export function handleLayoutChange(layout: WebUIGridLayout): void {
-  const serial = getCurrentPrinterSerial();
-  if (!serial) {
-    return;
-  }
-  layoutPersistence.save(layout, serial);
-}
-
-export function saveCurrentLayoutSnapshot(): void {
-  if (!isGridInitialized()) {
-    return;
-  }
-  const serial = getCurrentPrinterSerial();
-  if (!serial) {
-    return;
-  }
-  const snapshot = gridManager.serialize();
-  layoutPersistence.save(snapshot, serial);
-}
-
+/** Mount the panels (first call only) and show the ones that apply to this printer. */
 export function loadLayoutForCurrentPrinter(): void {
-  let serial = getCurrentPrinterSerial();
-  if (!serial) {
-    serial = DEMO_SERIAL;
-    setCurrentPrinterSerial(serial);
-  }
-
-  const mobile = isMobileViewport();
-
-  resetLayoutContainers();
-
-  if (mobile) {
-    mobileLayoutManager.initialize();
-    const settings = loadSettingsForSerial(serial);
-    updateCurrentSettings(settings);
-    mobileLayoutManager.load(settings.visibleComponents);
-    setMobileLayout(true);
-  } else {
-    ensureGridInitialized();
-    const storedLayout = layoutPersistence.load(serial);
-    const layout = ensureCompleteLayout(storedLayout);
-
-    gridManager.load(layout);
-
-    const unsubscribe = getGridChangeUnsubscribe();
-    if (unsubscribe) {
-      unsubscribe();
-    }
-    setGridChangeUnsubscribe(gridManager.onChange(handleLayoutChange));
-    setMobileLayout(false);
-  }
-
-  const updatedSettings = loadSettingsForSerial(serial);
-  updateCurrentSettings(updatedSettings);
-  applySettings(updatedSettings);
-  refreshSettingsUI(updatedSettings);
+  mountPanels();
+  applyPanelVisibility();
   rehydrateLayoutState();
   layoutUiHooks.onAfterLayoutRefresh?.();
+}
+
+/** Hide the panels the connected printer has no feature for (for example the single-nozzle card on a Creator 5). */
+export function applyPanelVisibility(): void {
+  for (const componentId of componentRegistry.getAllIds()) {
+    const supported = isComponentSupported(componentId, state.printerFeatures ?? null);
+    componentRegistry.createElement(componentId).classList.toggle('hidden', !supported);
+  }
 }
 
 export function openSettingsModal(): void {
   const modal = $('settings-modal');
   if (!modal) return;
-  refreshSettingsUI(getCurrentSettings());
   void loadCurrentThemeIntoSettings();
   modal.classList.remove('hidden');
 }
@@ -450,19 +90,6 @@ export function closeSettingsModal(): void {
   const modal = $('settings-modal');
   if (!modal) return;
   modal.classList.add('hidden');
-}
-
-export function resetLayoutForCurrentPrinter(): void {
-  const serial = getCurrentPrinterSerial();
-  if (!serial) {
-    return;
-  }
-
-  layoutPersistence.reset(serial);
-  updateCurrentSettings({ ...DEFAULT_SETTINGS });
-  persistSettings();
-  loadLayoutForCurrentPrinter();
-  showToast('Layout reset to default', 'info');
 }
 
 export function isSpoolmanAvailableForCurrentContext(): boolean {
@@ -511,22 +138,6 @@ export function isComponentSupported(
 
   return true;
 }
-
-export function shouldComponentBeVisible(
-  componentId: string,
-  settings: WebUISettings,
-  features: PrinterFeatures | null
-): boolean {
-  if (!settings.visibleComponents.includes(componentId)) {
-    return false;
-  }
-  return isComponentSupported(componentId, features);
-}
-
-// Cards are not auto-revealed when their feature becomes available. They are
-// feature-gated in the panel-visibility picker (see isComponentSupported): when
-// the feature is present the card's toggle becomes enabled and the user adds and
-// positions it themselves, matching the desktop FlashForgeUI behaviour.
 
 export async function loadWebUITheme(): Promise<void> {
   try {

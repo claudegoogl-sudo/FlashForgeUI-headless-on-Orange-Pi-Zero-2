@@ -13,8 +13,8 @@ import { state } from '../core/AppState.js';
 import { getStationSlot } from '../features/ifs-station.js';
 import { isSpoolmanAvailableForCurrentContext } from '../features/layout-theme.js';
 import { $, hideElement, setTextContent, showElement } from '../shared/dom.js';
+import { tweenNumber } from '../shared/motion.js';
 import {
-  formatCompletionTime,
   formatElapsedSeconds,
   formatLifetimeFilament,
   formatLifetimePrintTime,
@@ -47,7 +47,9 @@ export function updateConnectionStatus(connected: boolean): void {
   if (stale) {
     // The next status update after reconnecting re-enables what the printer state allows.
     document
-      .querySelectorAll<HTMLButtonElement>('#control-grid button, .temp-btn, .filtration-btn')
+      .querySelectorAll<HTMLButtonElement>(
+        '.acts button, .fa-row button, .light-switch button, .temp-btn, .filtration-btn'
+      )
       .forEach((button) => {
         button.disabled = true;
         button.title = 'Not connected to the WebUI server';
@@ -63,9 +65,10 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     setTextContent('bed-temp', '--°C / --°C');
     setTextContent('extruder-temp', '--°C / --°C');
     setTextContent('current-job', 'No data');
-    setTextContent('progress-percentage', '0%');
+    setProgress(0);
     updateModelPreview(null);
     updateCreator5TemperatureCard(null);
+    updateToolStrip(null);
     return;
   }
 
@@ -91,12 +94,7 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
 
     const progress = Number.isNaN(status.progress) ? 0 : status.progress;
     const progressPercent = progress <= 1 ? Math.round(progress * 100) : Math.round(progress);
-    setTextContent('progress-percentage', `${progressPercent}%`);
-
-    const progressBar = $('progress-bar') as HTMLProgressElement | null;
-    if (progressBar) {
-      progressBar.value = progressPercent;
-    }
+    setProgress(progressPercent);
 
     if (
       status.currentLayer !== undefined &&
@@ -117,9 +115,9 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
       setTextContent('elapsed-time', '--:--');
     }
 
-    // The library sets completionTime to null while the print is not
-    // advancing, so the display falls back to '--:--' automatically.
-    setTextContent('time-remaining', formatCompletionTime(status.completionTime ?? null));
+    // The library sets completionTime to null while the print is not advancing,
+    // so the time left is only shown while the job really counts down.
+    setTextContent('time-remaining', formatTimeLeft(status));
 
     if (status.estimatedWeight !== undefined && !Number.isNaN(status.estimatedWeight)) {
       setTextContent('job-weight', `${Math.round(status.estimatedWeight)}g`);
@@ -136,14 +134,10 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     updateModelPreview(status.thumbnailData);
   } else {
     setTextContent('current-job', 'No active job');
-    setTextContent('progress-percentage', '0%');
-    const progressBar = $('progress-bar') as HTMLProgressElement | null;
-    if (progressBar) {
-      progressBar.value = 0;
-    }
+    setProgress(0);
     setTextContent('layer-info', '-- / --');
     setTextContent('elapsed-time', '--:--');
-    setTextContent('time-remaining', '--:--');
+    setTextContent('time-remaining', '--');
     setTextContent('job-weight', '--');
     setTextContent('job-length', '--');
     updateModelPreview(null);
@@ -152,6 +146,7 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
   updateButtonStates(status.printerState || 'Unknown');
   updateFiltrationStatus(status.filtrationMode);
   updateCreator5TemperatureCard(status);
+  updateToolStrip(status);
   updateTvocDisplay(status);
 }
 
@@ -170,6 +165,32 @@ function readableOn(hex: string): string {
   return 1.05 / (luminance + 0.05) > (luminance + 0.05) / 0.058 ? '#ffffff' : '#12171b';
 }
 
+/** Show the job percent (eased) and fill the dimension-line bar. */
+function setProgress(percent: number): void {
+  const label = $('progress-percentage');
+  if (label) {
+    tweenNumber(label, percent, (value) => `${Math.round(value)}%`);
+  }
+  const bar = $('progress-bar');
+  if (bar) {
+    bar.style.setProperty('--pn', String(Math.min(100, Math.max(0, percent)) / 100));
+    bar.setAttribute('aria-valuenow', String(Math.round(percent)));
+  }
+}
+
+/** "53 min left" or "1 h 05 min left"; "--" while the print is not advancing. */
+function formatTimeLeft(status: PrinterStatus): string {
+  const minutes = status.timeRemaining;
+  if (!status.completionTime || minutes === undefined || Number.isNaN(minutes) || minutes <= 0) {
+    return '--';
+  }
+  const rounded = Math.round(minutes);
+  if (rounded < 60) {
+    return `${rounded} min left`;
+  }
+  return `${Math.floor(rounded / 60)} h ${String(rounded % 60).padStart(2, '0')} min left`;
+}
+
 const TOOL_MAX_C = 300;
 const BED_MAX_C = 120;
 const CHAMBER_MAX_C = 80;
@@ -183,30 +204,97 @@ function roundTemp(value: number): number {
  * Render one heater reading: the current temperature large, the target beside it,
  * and a dimension line (filled to the current value, tick at the target).
  */
-function renderReading(element: HTMLElement | null, current: number, target: number, max: number): void {
+function renderReading(
+  element: HTMLElement | null,
+  current: number,
+  target: number,
+  max: number
+): void {
   if (!element) {
     return;
   }
   const c = roundTemp(current);
   const t = roundTemp(target);
-  element.textContent = '';
-  element.setAttribute('aria-label', t > 0 ? `${c} °C, target ${t} °C` : `${c} °C, heater off`);
 
-  const now = document.createElement('span');
-  now.className = 'temp-now';
-  now.textContent = String(c);
-  const unit = document.createElement('span');
-  unit.className = 'temp-unit';
-  unit.textContent = '°C';
-  const goal = document.createElement('span');
-  goal.className = 'temp-goal';
+  let now = element.querySelector<HTMLElement>('.temp-now');
+  let goal = element.querySelector<HTMLElement>('.temp-goal');
+  if (!now || !goal) {
+    element.textContent = '';
+    now = document.createElement('span');
+    now.className = 'temp-now';
+    const unit = document.createElement('span');
+    unit.className = 'temp-unit';
+    unit.textContent = '°C';
+    goal = document.createElement('span');
+    goal.className = 'temp-goal';
+    element.append(now, unit, goal);
+  }
+
+  tweenNumber(now, c);
   goal.textContent = t > 0 ? `target ${t}°C` : 'off';
-  element.append(now, unit, goal);
+  element.setAttribute('aria-label', t > 0 ? `${c} °C, target ${t} °C` : `${c} °C, heater off`);
 
   const clamp = (value: number) => Math.min(100, Math.max(0, (value / max) * 100));
   element.style.setProperty('--now', `${clamp(c)}%`);
   element.style.setProperty('--goal', `${clamp(t)}%`);
   element.classList.toggle('has-goal', t > 0);
+}
+
+/** Give a tool tile the filament colour of its material-station slot. */
+function applyToolColor(
+  tile: HTMLElement | null,
+  materialEl: HTMLElement | null,
+  toolNumber: number
+): void {
+  const slot = getStationSlot(toolNumber);
+  if (tile) {
+    if (slot) {
+      tile.style.setProperty('--tool-color', slot.color);
+      tile.style.setProperty('--on-tool', readableOn(slot.color));
+    } else {
+      tile.style.removeProperty('--tool-color');
+      tile.style.removeProperty('--on-tool');
+    }
+    tile.classList.toggle('has-filament', Boolean(slot));
+  }
+  if (materialEl) {
+    materialEl.textContent = slot?.material ?? '';
+  }
+}
+
+/** Read-only tool temperatures for the Print screen. */
+export function updateToolStrip(status: PrinterStatus | null): void {
+  const strip = $('tool-strip');
+  if (!strip) {
+    return;
+  }
+  const toolTemps = status?.toolTemps ?? [];
+  $('tool-strip-panel')?.classList.toggle('hidden', toolTemps.length === 0);
+
+  if (strip.querySelectorAll('.strip-tile').length !== toolTemps.length) {
+    strip.innerHTML = toolTemps
+      .map(
+        (_, i) => `
+      <div class="tool-tile strip-tile" data-strip-tile="${i}">
+        <div class="tool-head"><span class="tool-name">T${i + 1}</span><span class="tool-material" data-strip-material="${i}"></span></div>
+        <div class="temp-reading" data-strip-reading="${i}" role="group"></div>
+      </div>`
+      )
+      .join('');
+  }
+  toolTemps.forEach((tool, i) => {
+    renderReading(
+      strip.querySelector<HTMLElement>(`[data-strip-reading="${i}"]`),
+      tool.current,
+      tool.target,
+      TOOL_MAX_C
+    );
+    applyToolColor(
+      strip.querySelector<HTMLElement>(`[data-strip-tile="${i}"]`),
+      strip.querySelector<HTMLElement>(`[data-strip-material="${i}"]`),
+      i + 1
+    );
+  });
 }
 
 /** Whether heater Set/Off controls should be disabled for the given printer state. */
@@ -277,22 +365,11 @@ export function updateCreator5TemperatureCard(status: PrinterStatus | null): voi
       );
 
       // Tool N prints from material station slot N: show that slot's filament.
-      const tile = toolGrid.querySelector<HTMLElement>(`[data-tool-tile="${i}"]`);
-      const slot = getStationSlot(i + 1);
-      const material = toolGrid.querySelector<HTMLElement>(`[data-tool-material="${i}"]`);
-      if (tile) {
-        if (slot) {
-          tile.style.setProperty('--tool-color', slot.color);
-          tile.style.setProperty('--on-tool', readableOn(slot.color));
-        } else {
-          tile.style.removeProperty('--tool-color');
-          tile.style.removeProperty('--on-tool');
-        }
-        tile.classList.toggle('has-filament', Boolean(slot));
-      }
-      if (material) {
-        material.textContent = slot?.material ?? '';
-      }
+      applyToolColor(
+        toolGrid.querySelector<HTMLElement>(`[data-tool-tile="${i}"]`),
+        toolGrid.querySelector<HTMLElement>(`[data-tool-material="${i}"]`),
+        i + 1
+      );
     });
   }
 
@@ -302,7 +379,10 @@ export function updateCreator5TemperatureCard(status: PrinterStatus | null): voi
   // for a plausible reading.
   const chamber = status.chamberTemperature;
   const hasChamber =
-    Boolean(status.hasChamberControl) && chamber !== undefined && !Number.isNaN(chamber) && chamber >= 0;
+    Boolean(status.hasChamberControl) &&
+    chamber !== undefined &&
+    !Number.isNaN(chamber) &&
+    chamber >= 0;
   chamberRow?.classList.toggle('hidden', !hasChamber);
   if (hasChamber) {
     renderReading(
@@ -589,9 +669,6 @@ function describeDeduction(deduction: DeductionSummary | null): string {
 
 /** One line that says why some controls are unavailable right now. */
 function describeControlsState(printerState: string, ready: boolean, busy: boolean): string {
-  if (printerState === 'Printing' || printerState === 'Heating' || printerState === 'Calibrating') {
-    return 'A job is running. Upload job, files and heaters are locked until it ends.';
-  }
   if (printerState === 'Paused' || printerState === 'Pausing') {
     return 'The job is paused. Resume it or cancel it.';
   }
@@ -601,10 +678,8 @@ function describeControlsState(printerState: string, ready: boolean, busy: boole
   if (busy) {
     return 'The printer is busy.';
   }
-  if (ready) {
-    return printerState === 'Ready'
-      ? 'The printer is idle. Start a job from Library or Upload job.'
-      : 'The last job is finished. Clear the plate on the printer before the next job.';
+  if (ready && printerState !== 'Ready') {
+    return 'The last job is finished. Clear the plate on the printer before the next job.';
   }
   return '';
 }
@@ -686,11 +761,13 @@ function updateButtonStates(printerState: string): void {
     homeAxesBtn.title = isPrintingActive
       ? 'Not available during a job'
       : gcodeUnavailable
-        ? 'This printer does not accept G-code commands'
+        ? 'The Creator 5 firmware has no home command over the network'
         : '';
   }
   if (uploadJobBtn) {
-    uploadJobBtn.title = uploadJobBtn.disabled ? 'Available when the printer is ready for a new job' : '';
+    uploadJobBtn.title = uploadJobBtn.disabled
+      ? 'Available when the printer is ready for a new job'
+      : '';
   }
 
   const hint = $('controls-hint');
@@ -698,15 +775,13 @@ function updateButtonStates(printerState: string): void {
     hint.textContent = describeControlsState(printerState, isReadyForNewJob, isBusy);
     hint.dataset.tone = printerState === 'Error' ? 'danger' : '';
   }
-  const more = document.querySelector<HTMLDetailsElement>('.ctl-more');
-  if (more) {
-    // In an error the Clear status button must be in view; opened once per error.
-    if (printerState !== 'Error') {
-      delete more.dataset.autoOpened;
-    } else if (!more.dataset.autoOpened) {
-      more.dataset.autoOpened = 'true';
-      more.open = true;
-    }
+  // Clear status is only offered when there is something to clear.
+  if (clearStatusBtn) {
+    clearStatusBtn.hidden = !(
+      printerState === 'Error' ||
+      printerState === 'Completed' ||
+      printerState === 'Cancelled'
+    );
   }
 
   const bedSetBtn = $('btn-bed-set') as HTMLButtonElement | null;

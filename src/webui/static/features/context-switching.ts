@@ -18,7 +18,7 @@ import {
 import { apiRequest, sendCommand } from '../core/Transport.js';
 import { $, hideElement, showElement, showToast } from '../shared/dom.js';
 import { teardownCameraStreamElements } from './camera.js';
-import { loadLayoutForCurrentPrinter, saveCurrentLayoutSnapshot } from './layout-theme.js';
+import { loadLayoutForCurrentPrinter } from './layout-theme.js';
 
 export interface ContextSwitchHandlers {
   onContextSwitched?: (contextId: string) => Promise<void> | void;
@@ -183,7 +183,6 @@ export async function switchPrinterContext(contextId: string): Promise<void> {
   }
 
   setCurrentContextId(contextId);
-  saveCurrentLayoutSnapshot();
 
   try {
     const result = await apiRequest<ApiResponse>('/api/contexts/switch', {

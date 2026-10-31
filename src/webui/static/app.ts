@@ -20,7 +20,7 @@
  * - UI updates: Real-time temperature, progress, layer info, ETA, lifetime statistics, thumbnails
  */
 
-import { getCurrentSettings, state, updateCurrentSettings } from './core/AppState.js';
+import { state } from './core/AppState.js';
 import {
   connectWebSocket,
   onConnectionChange,
@@ -57,13 +57,9 @@ import {
 import { setupJobUpload } from './features/job-upload.js';
 import {
   applyDefaultTheme,
-  applySettings,
   initializeLayout,
   loadWebUITheme,
-  persistSettings,
-  refreshSettingsUI,
   setupLayoutEventHandlers,
-  setupViewportListener,
 } from './features/layout-theme.js';
 import {
   closeMaterialMatchingModal,
@@ -77,12 +73,12 @@ import { refreshSSHSettings, setupSSHSettings } from './features/ssh.js';
 import { $, hideElement, showElement } from './shared/dom.js';
 import { initializeLucideIcons } from './shared/icons.js';
 import { type DialogHandlers, setupDialogEventHandlers } from './ui/dialogs.js';
-import { setupHeaderEventHandlers } from './ui/header.js';
 import {
   updateConnectionStatus,
   updatePrinterStatus,
   updateSpoolmanPanelState,
 } from './ui/panels.js';
+import { setupViews } from './ui/views.js';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -271,11 +267,6 @@ export interface PrinterContext {
 export interface ContextsResponse extends ApiResponse {
   contexts?: PrinterContext[];
   activeContextId?: string;
-}
-
-export interface WebUISettings {
-  visibleComponents: string[];
-  editMode: boolean;
 }
 
 export interface MaterialSlotInfo {
@@ -507,13 +498,7 @@ async function initialize(): Promise<void> {
   initializeLucideIcons();
 
   setupLayoutEventHandlers();
-  setupHeaderEventHandlers({
-    getCurrentSettings,
-    updateCurrentSettings,
-    applySettings,
-    persistSettings,
-    refreshSettingsUI,
-  });
+  setupViews();
 
   const dialogHandlers: DialogHandlers = {
     onStartPrintJob: () => startPrintJob(),
@@ -580,8 +565,6 @@ async function initialize(): Promise<void> {
       initializeCamera();
     },
   });
-
-  setupViewportListener();
 
   applyDefaultTheme();
   await loadAuthStatus();

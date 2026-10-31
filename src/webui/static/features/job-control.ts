@@ -15,14 +15,13 @@ import type {
   PrintJobStartResponse,
   SpoolAssignment,
 } from '../app.js';
-import { getCurrentSettings, state } from '../core/AppState.js';
+import { state } from '../core/AppState.js';
 import { apiRequest, sendCommand } from '../core/Transport.js';
 import { $, confirmAction, hideElement, showToast } from '../shared/dom.js';
 import { isAD5XJobFile, isMultiColorJobFile } from '../shared/formatting.js';
 import { loadFileList, showTemperatureDialog, type TemperatureTarget } from '../ui/dialogs.js';
-import { openFileLibrary } from './file-library.js';
 import { openJobUploadModal } from './job-upload.js';
-import { applySettings, refreshSettingsUI } from './layout-theme.js';
+import { applyPanelVisibility } from './layout-theme.js';
 import { openMaterialMatchingModal } from './material-matching.js';
 
 const KEEP_ALIVE_INTERVAL_MS = 30000;
@@ -68,9 +67,7 @@ export async function loadPrinterFeatures(): Promise<void> {
       state.printerFeatures = result.features;
       updateFeatureVisibility();
 
-      const settings = getCurrentSettings();
-      applySettings(settings);
-      refreshSettingsUI(settings);
+      applyPanelVisibility();
     }
   } catch (error) {
     console.error('Failed to load printer features:', error);
@@ -243,7 +240,7 @@ async function handleCreator5TempButton(
 }
 
 export function setupJobControlEventHandlers(): void {
-  const containers = [$('webui-grid-desktop'), $('webui-grid-mobile')];
+  const containers = [$('views')];
 
   containers.forEach((container) => {
     if (!container) {
@@ -319,9 +316,6 @@ export function setupJobControlEventHandlers(): void {
           break;
         case 'btn-upload-job':
           openJobUploadModal();
-          break;
-        case 'btn-file-library':
-          await openFileLibrary();
           break;
         case 'btn-refresh':
           sendCommand({ command: 'REQUEST_STATUS' });

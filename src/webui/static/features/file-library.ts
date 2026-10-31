@@ -11,7 +11,8 @@
 import type { JobUploadStageResponse } from '../app.js';
 import { state } from '../core/AppState.js';
 import { apiRequest, apiRequestWithMetadata, buildAuthHeaders } from '../core/Transport.js';
-import { $, confirmAction, hideElement, showElement, showToast } from '../shared/dom.js';
+import { $, confirmAction, showToast } from '../shared/dom.js';
+import { registerViewHooks, showView } from '../ui/views.js';
 import { loadFileList } from '../ui/dialogs.js';
 import { previewGcodeFile } from './gcode-viewer.js';
 import { openJobUploadWithStaged } from './job-upload.js';
@@ -89,15 +90,13 @@ export function hasAcceptedExtension(name: string): boolean {
 
 export async function openFileLibrary(): Promise<void> {
   if (!isAuthenticated()) return;
-  showElement('file-library-modal');
   await refreshLibrary();
   if (refreshTimer === null) {
     refreshTimer = window.setInterval(() => void refreshLibrary(true), REFRESH_INTERVAL_MS);
   }
 }
 
-function closeFileLibrary(): void {
-  hideElement('file-library-modal');
+function leaveFileLibrary(): void {
   if (refreshTimer !== null) {
     window.clearInterval(refreshTimer);
     refreshTimer = null;
@@ -194,7 +193,9 @@ function renderLibrary(list: HTMLElement, files: LibraryFile[]): void {
   }
 
   // The file that is printing now comes first.
-  const ordered = [...files].sort((a, b) => Number(isRunningJob(b.name)) - Number(isRunningJob(a.name)));
+  const ordered = [...files].sort(
+    (a, b) => Number(isRunningJob(b.name)) - Number(isRunningJob(a.name))
+  );
   for (const file of ordered) {
     const item = document.createElement('div');
     item.className = 'lib-item';
@@ -484,7 +485,6 @@ async function printFromLibrary(name: string, button: HTMLButtonElement): Promis
       showToast(staged.error || 'Could not prepare the file', 'error');
       return;
     }
-    closeFileLibrary();
     await openJobUploadWithStaged(staged, name);
   } catch (error) {
     console.error('Print from library failed:', error);
@@ -513,7 +513,6 @@ async function sendToPrinter(name: string, button: HTMLButtonElement): Promise<v
     if (data.success) {
       showToast(data.message || 'Sent to printer', 'success');
       if (window.confirm('Sent. Open the printer file list to start it?')) {
-        closeFileLibrary();
         await loadFileList('recent');
       }
     } else {
@@ -529,10 +528,9 @@ async function sendToPrinter(name: string, button: HTMLButtonElement): Promise<v
 }
 
 export function setupFileLibraryHandlers(): void {
-  $('lib-close')?.addEventListener('click', closeFileLibrary);
+  registerViewHooks('files', { enter: () => void openFileLibrary(), leave: leaveFileLibrary });
   $('lib-refresh')?.addEventListener('click', () => void refreshLibrary());
   $('lib-printer-files')?.addEventListener('click', async () => {
-    closeFileLibrary();
     await loadFileList('recent');
   });
 
@@ -546,9 +544,6 @@ export function setupFileLibraryHandlers(): void {
   });
 
   const modal = $('file-library-modal');
-  modal?.addEventListener('click', (event) => {
-    if (event.target === modal) closeFileLibrary();
-  });
   modal?.addEventListener('dragover', (event) => {
     event.preventDefault();
   });
@@ -570,9 +565,9 @@ export function setupFileLibraryHandlers(): void {
         break;
       case 'view':
         if (previewGcodeFile(name)) {
-          closeFileLibrary();
+          showView('print', { stage: 'layers' });
         } else {
-          showToast('Enable the G-code View panel in the settings to preview files', 'error');
+          showToast('The layer view is not available', 'error');
         }
         break;
       case 'send':

@@ -49,7 +49,8 @@ test.describe('WebUI interactive multi-tool material matching', () => {
       await openWithRememberedToken(page, webui, token);
       await switchPrinterInUi(page, webui, token, printer.machineName);
 
-      await page.click('#btn-upload-job');
+      await page.click('[data-view-target="files"]');
+    await page.click('#btn-upload-job');
       await expect(page.locator('#job-upload-modal')).toBeVisible();
       await page.locator('#job-upload-file-input').setInputFiles(path.join(FIXTURES_DIR, TWO_TOOL_FIXTURE));
 
@@ -89,7 +90,8 @@ test.describe('WebUI interactive multi-tool material matching', () => {
       await openWithRememberedToken(page, webui, token);
       await switchPrinterInUi(page, webui, token, printer.machineName);
 
-      await page.click('#btn-upload-job');
+      await page.click('[data-view-target="files"]');
+    await page.click('#btn-upload-job');
       await page.locator('#job-upload-file-input').setInputFiles(path.join(FIXTURES_DIR, TWO_TOOL_FIXTURE));
       const matching = page.locator('#material-matching-modal');
       await expect(matching.locator('.material-tool-item')).toHaveCount(2);
@@ -135,6 +137,7 @@ test.describe('WebUI matching dialog spool picker (Spoolman)', () => {
     // One printer only, so there is no printer picker to switch with.
     await openWithRememberedToken(page, webui, token);
 
+    await page.click('[data-view-target="files"]');
     await page.click('#btn-upload-job');
     await page.locator('#job-upload-file-input').setInputFiles(path.join(FIXTURES_DIR, TWO_TOOL_FIXTURE));
     const matching = page.locator('#material-matching-modal');

@@ -60,7 +60,10 @@ function render(data: LightTimerResponse): void {
   body?.classList.toggle('hidden', !data.supported);
   if (!data.supported) return;
 
-  for (const [id, on] of [['btn-led-on', true], ['btn-led-off', false]] as const) {
+  for (const [id, on] of [
+    ['btn-led-on', true],
+    ['btn-led-off', false],
+  ] as const) {
     const button = $(id);
     if (button && data.lightOn !== undefined) {
       button.setAttribute('aria-pressed', String(data.lightOn === on));
@@ -106,9 +109,7 @@ function renderCountdown(): void {
   row.classList.remove('hidden');
   const remaining = (offAt - (Date.now() + clockOffset)) / 1000;
   text.textContent =
-    remaining > 0
-      ? `Light turns off in ${formatCountdown(remaining)}`
-      : 'Switching the light off…';
+    remaining > 0 ? `Light turns off in ${formatCountdown(remaining)}` : 'Switching the light off…';
   if (countdownTimer === null) {
     countdownTimer = window.setInterval(renderCountdown, COUNTDOWN_MS);
   }

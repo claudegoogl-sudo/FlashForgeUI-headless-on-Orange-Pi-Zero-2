@@ -14,18 +14,10 @@ const packageJson = require('../package.json');
 // Configuration
 const srcDir = 'src/webui/static';
 const destDir = 'dist/webui/static';
-const filesToCopy = ['index.html', 'webui.css', 'gridstack-extra.min.css', 'favicon.png'];
+const filesToCopy = ['index.html', 'webui.css', 'favicon.png'];
 
 // Vendor library to copy from node_modules
 const vendorLibraries = [
-  {
-    src: 'node_modules/gridstack/dist/gridstack-all.js',
-    dest: 'gridstack-all.js',
-  },
-  {
-    src: 'node_modules/gridstack/dist/gridstack.min.css',
-    dest: 'gridstack.min.css',
-  },
   {
     src: 'node_modules/lucide/dist/umd/lucide.min.js',
     dest: 'lucide.min.js',
@@ -41,6 +33,10 @@ const libFiles = [
   {
     src: 'src/webui/static/fonts/archivo-var-latin.woff2',
     dest: 'fonts/archivo-var-latin.woff2',
+  },
+  {
+    src: 'src/webui/static/img/brushed.webp',
+    dest: 'img/brushed.webp',
   },
 ];
 

@@ -18,7 +18,6 @@
       "!!FlashForgeUI-Electron",
       "!!.pi/tasks-*.json",
       "!!data",
-      "!!src/webui/static/gridstack-extra.min.css",
       "!!src/webui/static/lib/video-rtc.js"
     ]
   },

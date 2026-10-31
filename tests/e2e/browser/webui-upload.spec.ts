@@ -146,6 +146,7 @@ test.describe('WebUI job upload', () => {
       await openWithRememberedToken(page, webui, token);
       await switchPrinterInUi(page, webui, token, printer.machineName);
 
+      await page.click('[data-view-target="files"]');
       await page.click('#btn-upload-job');
       const modal = page.locator('#job-upload-modal');
       await expect(modal).toBeVisible();
@@ -188,6 +189,7 @@ test.describe('WebUI job upload', () => {
       await openWithRememberedToken(page, webui, token);
       await switchPrinterInUi(page, webui, token, printer.machineName);
 
+      await page.click('[data-view-target="files"]');
       await page.click('#btn-upload-job');
       const modal = page.locator('#job-upload-modal');
       await expect(modal).toBeVisible();
