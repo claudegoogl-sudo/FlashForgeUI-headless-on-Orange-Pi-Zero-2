@@ -133,7 +133,7 @@ function resetJob(name: string | null): void {
   sampleTime = 0;
   bytesPerSecond = 0;
   live = true;
-  message = name ? 'Loading G-code...' : 'No active print.';
+  message = name ? 'Loading G-code…' : 'No active print.';
 }
 
 async function loadMeta(name: string): Promise<void> {

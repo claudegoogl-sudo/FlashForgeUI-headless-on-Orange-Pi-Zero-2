@@ -344,7 +344,7 @@ async function connectToDiscoveredPrinter(
   productId?: number
 ): Promise<void> {
   try {
-    showToast('Detecting printer type...', 'info');
+    showToast('Detecting printer type…', 'info');
 
     // STEP 1: Probe printer to detect type and capabilities
     const detectResponse = await apiRequest<{
@@ -397,7 +397,7 @@ async function connectToDiscoveredPrinter(
     }
 
     // STEP 3: Connect with detected type and check code
-    showToast('Connecting to printer...', 'info');
+    showToast('Connecting to printer…', 'info');
 
     const response = await apiRequest<{
       success: boolean;
@@ -487,7 +487,7 @@ async function connectManually(): Promise<void> {
   }
 
   try {
-    showToast('Detecting printer type...', 'info');
+    showToast('Detecting printer type…', 'info');
 
     // STEP 1: Auto-detect printer type
     const detectResponse = await apiRequest<{
@@ -566,7 +566,7 @@ async function connectManually(): Promise<void> {
     }
 
     // STEP 4: Connect with detected type
-    showToast('Connecting to printer...', 'info');
+    showToast('Connecting to printer…', 'info');
 
     const response = await apiRequest<{
       success: boolean;
@@ -682,7 +682,7 @@ async function loadSavedPrinters(): Promise<void> {
  */
 async function reconnectToSavedPrinter(serialNumber: string): Promise<void> {
   try {
-    showToast('Reconnecting to printer...', 'info');
+    showToast('Reconnecting to printer…', 'info');
 
     const response = await apiRequest<{
       success: boolean;

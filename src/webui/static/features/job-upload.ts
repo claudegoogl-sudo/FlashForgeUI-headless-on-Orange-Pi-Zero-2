@@ -48,11 +48,11 @@ interface UploadProgressStep {
  * show the same sequence; neither is real progress - ff-api reports none.
  */
 const MATERIAL_STATION_PROGRESS_STEPS: readonly UploadProgressStep[] = [
-  { percentage: 15, status: 'Validating material mappings...' },
-  { percentage: 30, status: 'Connecting to material station...' },
-  { percentage: 50, status: 'Uploading file to printer...' },
-  { percentage: 70, status: 'Processing 3MF data...' },
-  { percentage: 90, status: 'Finalizing upload...' },
+  { percentage: 15, status: 'Validating material mappings…' },
+  { percentage: 30, status: 'Connecting to material station…' },
+  { percentage: 50, status: 'Uploading file to printer…' },
+  { percentage: 70, status: 'Processing 3MF data…' },
+  { percentage: 90, status: 'Finalizing upload…' },
 ];
 const MATERIAL_STATION_STEP_DELAY_MS = 300;
 
@@ -60,7 +60,7 @@ const MATERIAL_STATION_STEP_DELAY_MS = 300;
 const STANDARD_PROGRESS_STEPS: readonly UploadProgressStep[] = [10, 30, 50, 70, 90].map(
   (percentage) => ({
     percentage,
-    status: 'Uploading file...',
+    status: 'Uploading file…',
   })
 );
 const STANDARD_STEP_DELAY_MS = 200;
@@ -125,7 +125,7 @@ export function openJobUploadModal(): void {
     input.value = '';
   }
 
-  setFilePathDisplay('No file selected...', '');
+  setFilePathDisplay('No file selected…', '');
   resetMetadata();
   setOkButtonState(false);
   updatePrimaryButtonLabel();
@@ -178,7 +178,7 @@ async function handleFileSelected(file: File | null): Promise<void> {
   await discardStagedFile();
 
   if (!file) {
-    setFilePathDisplay('No file selected...', '');
+    setFilePathDisplay('No file selected…', '');
     resetMetadata();
     setOkButtonState(false);
     showLoading(false);
@@ -208,7 +208,7 @@ async function handleFileSelected(file: File | null): Promise<void> {
     return;
   }
 
-  showLoading(true, 'Uploading file... 0%');
+  showLoading(true, 'Uploading file… 0%');
 
   let staged: JobUploadStageResponse;
   try {
@@ -315,11 +315,11 @@ function stageFile(file: File): Promise<JobUploadStageResponse> {
         return;
       }
       const percentage = Math.round((event.loaded / event.total) * 100);
-      showLoading(true, percentage >= 100 ? 'Parsing file...' : `Uploading file... ${percentage}%`);
+      showLoading(true, percentage >= 100 ? 'Parsing file…' : `Uploading file… ${percentage}%`);
     });
 
     request.upload.addEventListener('load', () => {
-      showLoading(true, 'Parsing file...');
+      showLoading(true, 'Parsing file…');
     });
 
     request.addEventListener('load', () => {
@@ -447,7 +447,7 @@ async function handleUpload(): Promise<void> {
 
   updateUploadProgress(
     0,
-    useMaterialStationUpload ? 'Preparing AD5X upload...' : 'Preparing upload...'
+    useMaterialStationUpload ? 'Preparing AD5X upload…' : 'Preparing upload…'
   );
   const stopSimulation = simulateProgress(steps, delay);
 
@@ -517,7 +517,7 @@ function handleUploadComplete(result: JobUploadStartResponse, fileName: string):
   const message = result.error || 'Unknown error';
   updateUploadProgress(0, `Upload failed: ${message}`);
   setOkButtonState(false);
-  setFilePathDisplay('No file selected...', '');
+  setFilePathDisplay('No file selected…', '');
   resetMetadata();
 
   const input = $('job-upload-file-input') as HTMLInputElement | null;
@@ -650,7 +650,7 @@ function renderThumbnail(thumbnail: string | null): void {
   if (!thumbnail) {
     const placeholder = document.createElement('span');
     placeholder.className = 'job-upload-no-preview';
-    placeholder.textContent = 'No Preview';
+    placeholder.textContent = 'No preview';
     box.appendChild(placeholder);
     return;
   }
@@ -716,7 +716,7 @@ function setOkButtonState(enabled: boolean): void {
 function updatePrimaryButtonLabel(): void {
   const button = $('job-upload-ok') as HTMLButtonElement | null;
   if (button) {
-    button.textContent = getStartNow() ? 'Start Print' : 'Send File';
+    button.textContent = getStartNow() ? 'Start print' : 'Send file';
   }
 }
 
@@ -780,7 +780,7 @@ function createMappingText(className: string, text: string): HTMLSpanElement {
   return element;
 }
 
-function showLoading(show: boolean, text = 'Parsing file...'): void {
+function showLoading(show: boolean, text = 'Parsing file…'): void {
   const label = $('job-upload-loading-text');
   if (label) {
     label.textContent = text;

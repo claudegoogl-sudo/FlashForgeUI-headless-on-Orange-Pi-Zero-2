@@ -147,7 +147,7 @@ export async function startPrintJob(): Promise<void> {
 ` +
         'The printer does not report which tools this file uses, so materials cannot be matched here. ' +
         'Tool 1 prints from slot 1, tool 2 from slot 2, and so on. ' +
-        'To choose slots, start the file with Upload Job or Library > Print... instead.'
+        'To choose slots, start the file with Upload job or Library > Print… instead.'
     );
     if (!proceed) {
       return;

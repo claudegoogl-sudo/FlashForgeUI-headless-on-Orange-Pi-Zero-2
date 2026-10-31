@@ -535,7 +535,7 @@ async function handleLoadConfigFile(): Promise<void> {
 
 async function handleFetchConfigSSH(): Promise<void> {
   try {
-    setStatus('Fetching config via SSH...');
+    setStatus('Fetching config via SSH…');
     const overridePath = inputEl('cal-ssh-config-path').value.trim() || undefined;
     const result = await apiRequest<SSHContentResponse>(
       '/api/calibration/ssh/fetch-config',
@@ -608,7 +608,7 @@ async function loadMeshProfile(profileName: string): Promise<void> {
 async function handleRunWorkflow(): Promise<void> {
   const runButton = buttonEl('cal-btn-run-workflow');
   try {
-    setStatus('Running calibration workflow...');
+    setStatus('Running calibration workflow…');
     runButton.disabled = true;
 
     const result = await apiRequest<WorkflowResponse>('/api/calibration/workflow', calBody());
@@ -680,7 +680,7 @@ async function handleLoadShaperCSV(): Promise<void> {
 async function handleFetchShaperSSH(): Promise<void> {
   const axis = calState.shaperResults.activeAxis;
   try {
-    setStatus(`Fetching ${axis.toUpperCase()} shaper data via SSH...`);
+    setStatus(`Fetching ${axis.toUpperCase()} shaper data via SSH…`);
     const result = await apiRequest<SSHContentResponse>('/api/calibration/ssh/fetch-shaper', calBody({ axis }));
     if (!result.success || typeof result.content !== 'string') {
       setStatus(`SSH Error: ${result.error || 'Failed to fetch shaper data'}`);
@@ -695,7 +695,7 @@ async function handleFetchShaperSSH(): Promise<void> {
 
 async function analyzeShaperContent(csvContent: string, axis: 'x' | 'y'): Promise<void> {
   try {
-    setStatus('Analyzing input shaper data...');
+    setStatus('Analyzing input shaper data…');
     const result = await apiRequest<ShaperAnalyzeResponse>(
       '/api/calibration/shaper/analyze',
       calBody({ csvContent, axis })
@@ -984,7 +984,7 @@ async function handleSSHConnect(silent = false): Promise<void> {
   try {
     buttonEl('cal-btn-ssh-connect').disabled = true;
     if (!silent) {
-      setSSHResult('Connecting...', 'info');
+      setSSHResult('Connecting…', 'info');
     }
 
     const result = await apiRequest<BasicResponse>('/api/calibration/ssh/connect', calBody());
@@ -1018,7 +1018,7 @@ async function handleSSHTest(): Promise<void> {
   const testButton = buttonEl('cal-btn-ssh-test');
   try {
     testButton.disabled = true;
-    setSSHResult('Testing connection...', 'info');
+    setSSHResult('Testing connection…', 'info');
 
     const connect = await apiRequest<BasicResponse>('/api/calibration/ssh/connect', calBody());
     if (!connect.success) {
@@ -1122,7 +1122,7 @@ async function handleExport(): Promise<void> {
 
   const format = selectEl('cal-export-format').value || 'json';
   try {
-    setStatus(`Exporting ${format.toUpperCase()} report...`);
+    setStatus(`Exporting ${format.toUpperCase()} report…`);
     // The report endpoint streams the raw payload (JSON/CSV text or PNG/PDF
     // binary) rather than a JSON envelope, so it needs a direct fetch.
     const response = await fetch(calQuery('/api/calibration/report', { format }), {

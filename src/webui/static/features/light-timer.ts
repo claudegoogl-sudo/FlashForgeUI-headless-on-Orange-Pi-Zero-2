@@ -108,7 +108,7 @@ function renderCountdown(): void {
   text.textContent =
     remaining > 0
       ? `Light turns off in ${formatCountdown(remaining)}`
-      : 'Switching the light off...';
+      : 'Switching the light off…';
   if (countdownTimer === null) {
     countdownTimer = window.setInterval(renderCountdown, COUNTDOWN_MS);
   }

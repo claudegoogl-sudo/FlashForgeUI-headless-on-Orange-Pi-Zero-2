@@ -13,7 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sync markers in the library list:** On printer, Queued, Failed (the error as a tooltip, with a Retry button), Not synced. The list refreshes itself every 10 seconds while it is open. `GET /api/files/library` returns `syncState`, `syncedAt` and `lastError` per file, and `POST /api/files/library/<name>/requeue` queues a file again. A manual Send marks the file as on the printer.
 - **Optional cleanup of printer storage, off by default** (`AutoSyncCleanupEnabled`, dry run by default). It deletes only files this service synced, keeps the newest N, spares the printing and last printed file, and never touches anything younger than 24 hours. It needs SFTP file management, so it does nothing on the Creator 5 (its HTTP API has no delete call).
 
+### Changed
+
+- **WebUI redesign ("drafting sheet").** New look and layout for the whole front end; see `DESIGN.md` and `PRODUCT.md`. Panels share hairlines on one 12-column sheet. The first row is a title block (printer state, job with a dimension-line progress bar, job details). Heaters show one tile per tool in the filament colour of its material-station slot. The Controls panel has one primary action (Pause or Resume), a Light On/Off segment, Library and Upload job, a closed "More" group, and a separate Cancel print. A hint line says why controls are unavailable. Archivo (variable, OFL, 42 KB) is served from the host; there is no CDN.
+- **Cancel print and library Delete ask for confirmation** in a page dialog (`confirmAction`). Cancel print had no confirmation before.
+- **Mobile order** is now state, job, camera, temperatures, controls. **Default desktop layout changed (layout version 3):** layouts saved by the browser for an older grid are dropped once and the new default is used.
+- **Theme:** the five colours still work (Settings > Colors). Saved values equal to the old defaults (the blue palette) are shown in the new palette; custom colours are kept. `DEFAULT_THEME` is the new palette.
+- **Camera is no longer cropped** (`object-fit: contain`). The chamber row is hidden when the printer reports no plausible chamber temperature (the Creator 5 reports about -100 C).
+- **Lost connection:** a banner and dimmed values show that the numbers are the last ones received.
+- Labels are sentence case, for example "Log out", "Edit layout", "Upload job". The Settings panel names match the panel titles.
+
 ### Fixed
+
+- Hidden panels no longer leave holes in the default layout (the grid parks them).
+- Unlabelled light-timer time input, missing `<main>`, skipped heading levels, 13 px checkboxes and 16 px sliders.
 
 - **The WebUI server can no longer start twice at the same moment.** A settings change that arrived during startup could start a second server while the first was still starting. The second start failed because the port was already taken, and its cleanup closed the first server's connections. Both now share one start. A stop that arrives while the server is still starting now waits for the start to finish, so the server cannot come back up after it was stopped. Thanks to [@jsalmon00](https://github.com/jsalmon00) for finding this in [FlashForgeUI-Electron#80](https://github.com/Parallel-7/FlashForgeUI-Electron/pull/80).
 - **go2rtc no longer keeps running after the app exits on an error.** A failed startup and the shutdown time limit both end the app without its normal shutdown, so the go2rtc camera process kept running and holding its ports. The app now stops go2rtc whenever it exits.

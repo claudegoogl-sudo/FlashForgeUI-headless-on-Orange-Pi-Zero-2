@@ -310,7 +310,7 @@ function applyThumbnail(fileName: string, thumbnail: string | null): void {
     slot.appendChild(image);
     slot.classList.add('has-image');
   } else {
-    slot.textContent = 'No Preview';
+    slot.textContent = 'No preview';
     slot.classList.add('no-preview');
   }
 }

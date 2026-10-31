@@ -234,7 +234,7 @@ function renderLibrary(list: HTMLElement, files: LibraryFile[]): void {
 
     const actions = document.createElement('div');
     actions.className = 'lib-actions';
-    actions.appendChild(makeButton('Print...', 'print', file.name, 'lib-primary'));
+    actions.appendChild(makeButton('Print…', 'print', file.name, 'lib-primary'));
     actions.appendChild(makeButton('Send to printer', 'send', file.name));
     actions.appendChild(makeButton('View', 'view', file.name));
     actions.appendChild(makeButton('Download', 'download', file.name));
@@ -383,7 +383,7 @@ async function uploadFiles(files: FileList | File[]): Promise<void> {
 
 async function downloadFile(name: string): Promise<void> {
   try {
-    setProgress(`Downloading ${name}...`, 0);
+    setProgress(`Downloading ${name}…`, 0);
     const response = await fetch(libraryUrl(name, '/download'), { headers: buildAuthHeaders() });
     if (!response.ok) {
       showToast(`Download failed (${response.status})`, 'error');
@@ -471,7 +471,7 @@ async function deleteFile(name: string): Promise<void> {
 /** Stage the stored file on the server and continue in the Upload Job dialog. */
 async function printFromLibrary(name: string, button: HTMLButtonElement): Promise<void> {
   button.disabled = true;
-  setProgress(`Preparing ${name}...`, 0);
+  setProgress(`Preparing ${name}…`, 0);
   try {
     const result = await apiRequestWithMetadata<JobUploadStageResponse>(
       libraryUrl(name, '/stage'),
@@ -502,7 +502,7 @@ async function sendToPrinter(name: string, button: HTMLButtonElement): Promise<v
     return;
   }
   button.disabled = true;
-  setProgress(`Sending ${name} to the printer...`, 0);
+  setProgress(`Sending ${name} to the printer…`, 0);
   try {
     const { data } = await postJson(libraryUrl(name, '/send'), {
       startNow: false,

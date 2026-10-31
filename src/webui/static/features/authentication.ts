@@ -45,7 +45,7 @@ export function setupAuthEventHandlers(handlers: AuthEventHandlers = {}): void {
         return;
       }
 
-      loginBtn.textContent = 'Logging in...';
+      loginBtn.textContent = 'Logging in…';
       (loginBtn as HTMLButtonElement).disabled = true;
 
       const success = await login(password, remember);

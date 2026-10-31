@@ -21,7 +21,10 @@ import {
   formatTime,
 } from '../shared/formatting.js';
 
+let hasBeenConnected = false;
+
 export function updateConnectionStatus(connected: boolean): void {
+  hasBeenConnected = hasBeenConnected || connected;
   const indicator = $('connection-indicator');
   const text = $('connection-text');
 
@@ -38,7 +41,12 @@ export function updateConnectionStatus(connected: boolean): void {
   }
 
   indicator?.closest('.connection-status')?.setAttribute('data-connected', String(connected));
+  const stale = hasBeenConnected && !connected;
+  $('connection-banner')?.classList.toggle('hidden', !stale);
+  $('main-content')?.toggleAttribute('data-stale', stale);
 }
+
+$('connection-reload')?.addEventListener('click', () => window.location.reload());
 
 export function updatePrinterStatus(status: PrinterStatus | null): void {
   if (!status) {
@@ -637,7 +645,7 @@ function updateButtonStates(printerState: string): void {
   // started as sliced (tool N prints from slot N); job-control confirms that first.
   const isCreator5Series = Boolean(state.printerFeatures?.hasMultiTool);
   const RESIDENT_JOB_HINT =
-    'Starts as sliced: tool N prints from slot N. Use Upload Job or Library to match materials.';
+    'Starts as sliced: tool N prints from slot N. Use Upload job or Library to match materials.';
   if (recentBtn) {
     recentBtn.disabled = !isReadyForNewJob;
     recentBtn.title = isCreator5Series ? RESIDENT_JOB_HINT : '';
