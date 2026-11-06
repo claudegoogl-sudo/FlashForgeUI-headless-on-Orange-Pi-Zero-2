@@ -5342,7 +5342,7 @@ input[type="range"] {
 }
 
 .lib-badge-printing {
-  color: var(--dim);
+  color: var(--ink);
 }
 
 .lib-actions {
